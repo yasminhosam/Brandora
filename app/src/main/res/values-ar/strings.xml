@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- API errors -->
+    <string name="error_network">لا يوجد اتصال بالإنترنت. تأكد من الشبكة وحاول مرة أخرى.</string>
+    <string name="error_timeout">استغرق الطلب وقتاً طويلاً. حاول مرة أخرى.</string>
+    <string name="error_unauthorized">انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.</string>
+    <string name="error_bad_request">بعض البيانات غير صحيحة. راجعها وحاول مرة أخرى.</string>
+    <string name="error_not_found">لم نعثر على المطلوب.</string>
+    <string name="error_conflict">هذا الإجراء غير متاح في هذه الخطوة. ارجع للخطوة السابقة وحاول مرة أخرى.</string>
+    <string name="error_file_too_large">الملف كبير جداً. الحد الأقصى 10 ميجابايت.</string>
+    <string name="error_server">حدث خطأ من جانبنا. حاول لاحقاً.</string>
+    <string name="error_unknown">حدث خطأ ما. حاول مرة أخرى.</string>
+    <string name="action_retry">إعادة المحاولة</string>
+</resources>
