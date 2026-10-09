@@ -11,4 +11,24 @@
     <string name="error_server">Something went wrong on our side. Please try again later.</string>
     <string name="error_unknown">Something went wrong. Please try again.</string>
     <string name="action_retry">Retry</string>
+
+    <!-- Catalog import: upload screen -->
+    <string name="import_title">Set up your catalog</string>
+    <string name="import_subtitle">Upload your Excel file and we\'ll build your product list.</string>
+    <string name="import_choose_file">Choose Excel file</string>
+    <string name="import_change_file">Choose a different file</string>
+    <string name="import_drop_hint">Tap to upload your Excel file</string>
+    <string name="import_drop_formats">XLSX only · Max 10 MB</string>
+    <string name="import_no_file">No file selected</string>
+    <string name="import_analyzing">Analyzing your file…</string>
+    <string name="import_continue">Continue</string>
+    <string name="import_add_first_product">No file? Add your first product manually</string>
+    <string name="import_size_kb">%1$s KB</string>
+    <string name="import_size_mb">%1$s MB</string>
+    <!-- TEMP (Slice 2): removed when the real review screen lands in Slice 3. -->
+    <string name="import_review_pending">Import job %1$s was created. The review screen comes next.</string>
+    <!-- TEMP: placeholder destination for the future Add Product screen. -->
+    <string name="import_add_product_title">Add product</string>
+    <string name="import_add_product_placeholder">The manual product screen will live here.</string>
+    <string name="error_invalid_file_type">That file type isn\'t supported. Please choose an .xlsx file.</string>
 </resources>

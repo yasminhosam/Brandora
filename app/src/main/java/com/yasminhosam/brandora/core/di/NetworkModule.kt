@@ -1,5 +1,6 @@
 package com.yasminhosam.brandora.core.di
 
+import com.yasminhosam.brandora.BuildConfig
 import com.yasminhosam.brandora.core.network.ApiConfig
 import dagger.Module
 import dagger.Provides
@@ -28,13 +29,17 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideOkHttp(): OkHttpClient = OkHttpClient.Builder()
+        // Keep this level at BASIC or lower: BODY would dump whole Excel files into logcat.
         .addInterceptor(HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC
             else HttpLoggingInterceptor.Level.NONE
         })
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        //   .addInterceptor(AuthInterceptor(sessionStore))
+        // Fail fast while debugging: short timeouts surface an unreachable backend in seconds.
+        // Release keeps patient values for slow networks and large multipart uploads.
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(if (BuildConfig.DEBUG) 30L else 120L, TimeUnit.SECONDS)
+        .readTimeout(if (BuildConfig.DEBUG) 30L else 120L, TimeUnit.SECONDS)
         .build()
 
 

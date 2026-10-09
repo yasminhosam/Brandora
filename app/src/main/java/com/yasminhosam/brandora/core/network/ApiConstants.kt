@@ -1,15 +1,20 @@
 package com.yasminhosam.brandora.core.network
 
+import com.yasminhosam.brandora.BuildConfig
+
 object ApiConfig {
-    // Backend runs on http://localhost:3000. From the Android emulator, localhost is 10.0.2.2.
+    // LAN backend: the test device must reach this host (same Wi-Fi for hardware).
     const val BASE_URL = "http://192.168.1.104:3000/"
+
+    // Single read point; the value comes from brandora.businessId in local.properties.
+    val CURRENT_BUSINESS_ID: String get() = BuildConfig.CURRENT_BUSINESS_ID
+
     const val MAX_UPLOAD_BYTES = 10L * 1024 * 1024 // Excel limit: 10 MiB (backend returns 413 above it)
     const val DEFAULT_LIMIT = 20
     const val DEFAULT_OFFSET = 0
 }
 
 object ApiEndpoints {
-    // Catalog
     const val CATALOG_ITEMS = "catalog-items"                                    // POST (create), GET (list)
 
     // Excel import flow: analyze -> mapping -> validate -> preview -> execute

@@ -1,0 +1,30 @@
+package com.yasminhosam.brandora.feature.catalogimport.data.remote
+
+import com.yasminhosam.brandora.core.network.ApiEndpoints
+import com.yasminhosam.brandora.core.network.ApiParams
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.Multipart
+import retrofit2.http.POST
+import retrofit2.http.Part
+import retrofit2.http.Path
+
+/**
+ * Internal: built with retrofit.create() inside the data source, because an internal type in a
+ * Hilt provider signature breaks Dagger's generated callers through Kotlin name mangling.
+ */
+internal interface CatalogImportApiService {
+
+    /**
+     * The form key comes from createFormData(), NOT from @Part: Retrofit ignores the
+     * annotation's value on a MultipartBody.Part parameter. A null sheetName part is omitted,
+     * so the backend falls back to the first sheet.
+     */
+    @Multipart
+    @POST(ApiEndpoints.IMPORT_ANALYZE)
+    suspend fun analyze(
+        @Path(ApiParams.PATH_BUSINESS_ID) businessId: String,
+        @Part file: MultipartBody.Part,
+        @Part(ApiParams.PART_SHEET_NAME) sheetName: RequestBody? = null
+    ): AnalyzeExcelResponseDto
+}

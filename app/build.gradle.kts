@@ -6,10 +6,28 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// brandora.businessId lives in local.properties (gitignored); read via providers so the
+// configuration cache invalidates when it changes.
+val defaultBusinessId = "00000000-0000-0000-0000-000000000000"
+val currentBusinessId: String = run {
+    val text = providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
+    if (text == null) {
+        defaultBusinessId
+    } else {
+        text.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("brandora.businessId=") }
+            ?.substringAfter('=')
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: defaultBusinessId
+    }
+}
+
 android {
     namespace = "com.yasminhosam.brandora"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -20,6 +38,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "CURRENT_BUSINESS_ID", "\"$currentBusinessId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -77,6 +97,7 @@ dependencies {
 
     // Tests
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

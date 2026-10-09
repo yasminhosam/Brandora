@@ -11,4 +11,24 @@
     <string name="error_server">حدث خطأ من جانبنا. حاول لاحقاً.</string>
     <string name="error_unknown">حدث خطأ ما. حاول مرة أخرى.</string>
     <string name="action_retry">إعادة المحاولة</string>
+
+    <!-- Catalog import: upload screen -->
+    <string name="import_title">جهّز الكتالوج</string>
+    <string name="import_subtitle">ارفع ملف Excel وسنبني لك قائمة المنتجات.</string>
+    <string name="import_choose_file">اختر ملف Excel</string>
+    <string name="import_change_file">اختر ملفاً آخر</string>
+    <string name="import_drop_hint">اضغط لرفع ملف Excel</string>
+    <string name="import_drop_formats">XLSX فقط · الحد الأقصى 10 ميجابايت</string>
+    <string name="import_no_file">لم يتم اختيار ملف</string>
+    <string name="import_analyzing">جارٍ تحليل الملف…</string>
+    <string name="import_continue">متابعة</string>
+    <string name="import_add_first_product">لا توجد ملف؟ أضف أول منتج يدوياً</string>
+    <string name="import_size_kb">%1$s كيلوبايت</string>
+    <string name="import_size_mb">%1$s ميجابايت</string>
+    <!-- TEMP (Slice 2): removed when the real review screen lands in Slice 3. -->
+    <string name="import_review_pending">تم إنشاء مهمة الاستيراد %1$s. شاشة المراجعة هي الخطوة التالية.</string>
+    <!-- TEMP: placeholder destination for the future Add Product screen. -->
+    <string name="import_add_product_title">إضافة منتج</string>
+    <string name="import_add_product_placeholder">ستكون شاشة إضافة المنتج هنا.</string>
+    <string name="error_invalid_file_type">نوع الملف غير مدعوم. يرجى اختيار ملف ‎.xlsx‎.</string>
 </resources>

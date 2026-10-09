@@ -1,6 +1,4 @@
 package com.yasminhosam.brandora.core.network
-
-import kotlinx.coroutines.CancellationException
 sealed interface ApiResult<out T> {
     data class Success<T>(val data: T) : ApiResult<T>
     data class Error(
@@ -11,7 +9,7 @@ sealed interface ApiResult<out T> {
 }
 enum class ApiErrorType {
     NETWORK, TIMEOUT, UNAUTHORIZED, BAD_REQUEST, NOT_FOUND,
-    CONFLICT, FILE_TOO_LARGE, SERVER, UNKNOWN
+    CONFLICT, FILE_TOO_LARGE, INVALID_FILE_TYPE, SERVER, UNKNOWN
 }
 
 inline fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> = when (this) {

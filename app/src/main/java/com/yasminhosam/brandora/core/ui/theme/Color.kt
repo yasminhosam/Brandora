@@ -1,60 +1,68 @@
 package com.yasminhosam.brandora.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
-val BrandPrimary = Color(0xFF0D9488)
-val BrandPrimaryDark = Color(0xFF0F766E)
-val BrandPrimaryContainer = Color(0xFFCCFBF1)      // teal-100
-val OnBrandPrimaryContainer = Color(0xFF134E4A)    // teal-900
 
-val Background = Color(0xFFF8FAFC)
-val Surface = Color(0xFFFFFFFF)
-val SurfaceSoft = Color(0xFFF1F5F9)
+// ───────── LIGHT ─────────
+val BrandPrimary = Color(0xFF7563A8)               // mauve: buttons, selected items
+val BrandPrimaryDark = Color(0xFF5E4F8C)           // derived: pressed state
+val BrandPrimaryContainer = Color(0xFFEEE9F6)      // light lavender: selected background
+val OnBrandPrimaryContainer = Color(0xFF2F2650)    // derived
 
-val TextPrimary = Color(0xFF0F172A)
-val TextSecondary = Color(0xFF475569)
-val TextMuted = Color(0xFF94A3B8)
+val Accent = Color(0xFFF2C6B4)                     // soft peach: extra touch
+val OnAccent = Color(0xFF5A3322)                   // derived
 
-val Border = Color(0xFFF1F5F9)
-val BorderStrong = Color(0xFFE2E8F0)
+val Background = Color(0xFFFAF9FC)                 // warm white
+val Surface = Color(0xFFFFFFFF)                    // cards
+val SurfaceSoft = Color(0xFFF4F1F9)                // derived
 
-val Success = Color(0xFF059669)
-val SuccessBackground = Color(0xFFD1FAE5)
-val Error = Color(0xFFDC2626)
-val ErrorBackground = Color(0xFFFEE2E2)
-val OnErrorContainer = Color(0xFF991B1B)
-val Warning = Color(0xFFD97706)
-val WarningBackground = Color(0xFFFEF3C7)
+val TextPrimary = Color(0xFF292436)
+val TextSecondary = Color(0xFF716B7D)
+val TextMuted = Color(0xFFA39EAD)                  // derived
 
-// Added (not in Figma): "In Progress" blue
-val Info = Color(0xFF2563EB)
-val InfoBackground = Color(0xFFDBEAFE)
-val OnInfoContainer = Color(0xFF1E3A8A)
+val Border = Color(0xFFEFECF4)                     // derived (lighter divider)
+val BorderStrong = Color(0xFFE5E1EC)
 
-// ───────── DARK (derived, same teal + slate family) ─────────
-val DarkPrimary = Color(0xFF2DD4BF)                // teal-400, readable on dark
-val DarkOnPrimary = Color(0xFF042F2E)
-val DarkPrimaryContainer = Color(0xFF115E59)       // teal-800
-val DarkOnPrimaryContainer = Color(0xFFCCFBF1)
+val Success = Color(0xFF287A59)
+val SuccessBackground = Color(0xFFDDF0E7)          // derived
+val Error = Color(0xFFBA414D)
+val ErrorBackground = Color(0xFFF8E1E3)            // derived
+val OnErrorContainer = Color(0xFF7A2530)           // derived
+val Warning = Color(0xFF946200)
+val WarningBackground = Color(0xFFF8EBCF)          // derived
 
-val DarkBackground = Color(0xFF0B1220)
-val DarkSurface = Color(0xFF0F172A)
-val DarkSurfaceVariant = Color(0xFF1E293B)
-val DarkSurfaceHigh = Color(0xFF273449)
+// "In Progress" blue (not in the palette, tuned to sit well with the mauve)
+val Info = Color(0xFF3F5FA8)
+val InfoBackground = Color(0xFFE1E8F6)
+val OnInfoContainer = Color(0xFF1F3366)
 
-val DarkTextPrimary = Color(0xFFF1F5F9)
-val DarkTextSecondary = Color(0xFFCBD5E1)
-val DarkTextMuted = Color(0xFF94A3B8)
+// ───────── DARK (derived from the same mauve family) ─────────
+val DarkPrimary = Color(0xFFB7A8E0)
+val DarkOnPrimary = Color(0xFF2A2145)
+val DarkPrimaryContainer = Color(0xFF4A3D78)
+val DarkOnPrimaryContainer = Color(0xFFEEE9F6)
 
-val DarkBorder = Color(0xFF1E293B)
-val DarkBorderStrong = Color(0xFF334155)
+val DarkAccent = Color(0xFFF2C6B4)
+val DarkOnAccent = Color(0xFF4A2A1B)
 
-val DarkSuccess = Color(0xFF34D399)
-val DarkSuccessBackground = Color(0xFF06352A)
-val DarkError = Color(0xFFF87171)
-val DarkErrorBackground = Color(0xFF3B1212)
-val DarkOnErrorContainer = Color(0xFFFECACA)
-val DarkWarning = Color(0xFFFBBF24)
-val DarkWarningBackground = Color(0xFF3F2E0A)
-val DarkInfo = Color(0xFF60A5FA)
-val DarkInfoBackground = Color(0xFF10264D)
-val DarkOnInfoContainer = Color(0xFFDBEAFE)
+val DarkBackground = Color(0xFF14111B)
+val DarkSurface = Color(0xFF1B1824)
+val DarkSurfaceVariant = Color(0xFF262232)
+val DarkSurfaceHigh = Color(0xFF312C3F)
+
+val DarkTextPrimary = Color(0xFFF2EFF7)
+val DarkTextSecondary = Color(0xFFC9C3D4)
+val DarkTextMuted = Color(0xFF8F889D)
+
+val DarkBorder = Color(0xFF262232)
+val DarkBorderStrong = Color(0xFF3A3548)
+
+val DarkSuccess = Color(0xFF5FCB9E)
+val DarkSuccessBackground = Color(0xFF0F2E22)
+val DarkError = Color(0xFFF08A93)
+val DarkErrorBackground = Color(0xFF3A171B)
+val DarkOnErrorContainer = Color(0xFFF9C9CD)
+val DarkWarning = Color(0xFFE8B54A)
+val DarkWarningBackground = Color(0xFF3A2A0B)
+val DarkInfo = Color(0xFF8FA9E8)
+val DarkInfoBackground = Color(0xFF17223F)
+val DarkOnInfoContainer = Color(0xFFDCE4F8)
