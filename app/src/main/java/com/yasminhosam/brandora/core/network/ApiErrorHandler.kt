@@ -30,7 +30,11 @@ class ApiErrorHandler @Inject constructor(
                 val apiError= parseErrorBody(
                     error.response()?.errorBody()?.string()
                 )
-                ApiResult.Error(type = typeFor(statusCode), code = statusCode, message = apiError?.readableMessage())
+                ApiResult.Error(
+                    type = typeFor(statusCode),
+                    code = statusCode,
+                    message = apiError?.readableMessage(),
+                    errorCode = apiError?.code)
 
             }
 

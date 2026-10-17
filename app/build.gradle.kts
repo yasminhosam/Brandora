@@ -6,23 +6,31 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// brandora.businessId lives in local.properties (gitignored); read via providers so the
-// configuration cache invalidates when it changes.
-val defaultBusinessId = "00000000-0000-0000-0000-000000000000"
-val currentBusinessId: String = run {
-    val text = providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
-    if (text == null) {
-        defaultBusinessId
-    } else {
-        text.lineSequence()
-            .map { it.trim() }
-            .firstOrNull { it.startsWith("brandora.businessId=") }
-            ?.substringAfter('=')
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-            ?: defaultBusinessId
-    }
-}
+// Machine-specific values live in local.properties (gitignored). They are read through
+// providers so the configuration cache invalidates when the file changes.
+val localProperties: String? =
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties")).asText.orNull
+
+fun localProperty(key: String, default: String): String =
+    localProperties
+        ?.lineSequence()
+        ?.map { it.trim() }
+        ?.firstOrNull { it.startsWith("$key=") }
+        ?.substringAfter('=')
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: default
+
+// brandora.businessId=<uuid>
+val currentBusinessId: String =
+    localProperty("brandora.businessId", "00000000-0000-0000-0000-000000000000")
+
+// brandora.baseUrl=http://192.168.1.104:3000/
+// Default targets the Android emulator's alias for the host machine.
+// Retrofit requires the base URL to end with '/', so it is normalized here.
+val baseUrl: String =
+    localProperty("brandora.baseUrl", "http://10.0.2.2:3000/")
+        .let { if (it.endsWith("/")) it else "$it/" }
 
 android {
     namespace = "com.yasminhosam.brandora"
@@ -40,6 +48,7 @@ android {
         versionName = "1.0"
 
         buildConfigField("String", "CURRENT_BUSINESS_ID", "\"$currentBusinessId\"")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -57,7 +66,7 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig=true
+        buildConfig = true
     }
 }
 
@@ -66,6 +75,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -98,6 +108,7 @@ dependencies {
     // Tests
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

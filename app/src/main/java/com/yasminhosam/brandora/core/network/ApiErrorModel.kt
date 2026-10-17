@@ -9,6 +9,7 @@ import kotlinx.serialization.json.contentOrNull
 @Serializable
 data class ApiErrorModel(
     val statusCode: Int?,
+    val code: String?,//stable identifier (e.g. MAPPING_NAME_REQUIRED) used for localization
     val message: JsonElement? = null,
     val error: String?
 ){
