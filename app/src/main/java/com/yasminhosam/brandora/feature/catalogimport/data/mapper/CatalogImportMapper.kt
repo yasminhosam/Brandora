@@ -29,7 +29,7 @@ internal fun SampleRowDto.toDomain(): SampleRow = SampleRow(
 /**
  * Mixed wire types become text; explicit JSON nulls stay null so columns keep their positions.
  */
-private fun JsonElement.toCellText(): String? = when (this) {
+internal fun JsonElement.toCellText(): String? = when (this) {
     is JsonNull -> null
     is JsonPrimitive -> contentOrNull
     // Cells are primitives in practice; render anything else rather than lose the column.

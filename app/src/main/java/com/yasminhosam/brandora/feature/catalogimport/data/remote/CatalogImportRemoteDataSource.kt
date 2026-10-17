@@ -6,6 +6,9 @@ import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.core.network.map
 import com.yasminhosam.brandora.feature.catalogimport.data.file.UriRequestBody
 import com.yasminhosam.brandora.feature.catalogimport.data.mapper.toDomain
+import com.yasminhosam.brandora.feature.catalogimport.data.mapper.toRequestDto
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import okhttp3.MultipartBody
@@ -33,6 +36,12 @@ class CatalogImportRemoteDataSource @Inject constructor(
                 sheetName = sheetName?.toRequestBody(TEXT_PLAIN_MEDIA_TYPE)
             )
         }.map { it.toDomain() }
+
+    suspend fun getMapping(importId: String): ApiResult<MappingPayload> =
+        errorHandler.safeApiCall { api.getMapping(importId) }.map { it.toDomain() }
+
+    suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
+        errorHandler.safeApiCall { api.confirmMapping(importId, columns.toRequestDto()) }.map { }
 }
 
 /**

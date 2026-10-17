@@ -6,7 +6,6 @@ import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.file.ExcelFileFactory
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.AnalyzeExcelFileUseCase
-import com.yasminhosam.brandora.feature.catalogimport.presentation.ImportSessionStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -14,8 +13,7 @@ import javax.inject.Inject
 @HiltViewModel
 class UploadViewModel @Inject constructor(
     private val analyzeExcelFile: AnalyzeExcelFileUseCase,
-    private val excelFileFactory: ExcelFileFactory,
-    private val sessionStore: ImportSessionStore
+    private val excelFileFactory: ExcelFileFactory
 ) : BaseViewModel<UploadUiState, UploadEvent, UploadEffect>(UploadUiState()) {
 
     override fun onEvent(event: UploadEvent) {
@@ -51,8 +49,7 @@ class UploadViewModel @Inject constructor(
             when (val result = analyzeExcelFile(file)) {
                 is ApiResult.Success -> {
                     setState { copy(isAnalyzing = false) }
-                    sessionStore.write(file, result.data)
-                    sendEffect(UploadEffect.NavigateToReview(result.data.importJobId))
+                    sendEffect(UploadEffect.NavigateToMapping(result.data.importJobId))
                 }
 
                 is ApiResult.Error ->

@@ -38,8 +38,8 @@ data class UploadUiState(
 
 sealed interface UploadEffect : UiEffect {
 
-    /** [importJobId] is the navigation argument for the review screen. */
-    data class NavigateToReview(val importJobId: String) : UploadEffect
+    /** [importId] is the navigation argument for the mapping screen. */
+    data class NavigateToMapping(val importId: String) : UploadEffect
 
     data object NavigateToManualEntry : UploadEffect
 }

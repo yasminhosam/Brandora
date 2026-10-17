@@ -1,8 +1,10 @@
-package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
+﻿package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
 
 import com.yasminhosam.brandora.core.network.ApiConfig
 import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
@@ -35,6 +37,13 @@ class AnalyzeExcelFileUseCaseTest {
             lastSheetName = sheetName
             return response
         }
+
+        override suspend fun getMapping(importId: String): ApiResult<MappingPayload> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
     }
 
     private fun file(

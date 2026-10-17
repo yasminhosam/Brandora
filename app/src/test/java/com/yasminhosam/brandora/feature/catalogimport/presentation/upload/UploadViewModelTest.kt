@@ -1,15 +1,16 @@
-package com.yasminhosam.brandora.feature.catalogimport.presentation.upload
+﻿package com.yasminhosam.brandora.feature.catalogimport.presentation.upload
 
 import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.file.ExcelFileFactory
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.SampleRow
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.AnalyzeExcelFileUseCase
-import com.yasminhosam.brandora.feature.catalogimport.presentation.ImportSessionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -47,6 +48,13 @@ class UploadViewModelTest {
             uploads++
             return result
         }
+
+        override suspend fun getMapping(importId: String): ApiResult<MappingPayload> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
     }
 
     private val mainDispatcher = UnconfinedTestDispatcher()
@@ -66,12 +74,10 @@ class UploadViewModelTest {
 
     private fun viewModel(
         picked: ExcelFile?,
-        result: ApiResult<ImportAnalysis> = SUCCESS,
-        store: ImportSessionStore = ImportSessionStore()
+        result: ApiResult<ImportAnalysis> = SUCCESS
     ) = UploadViewModel(
         analyzeExcelFile = AnalyzeExcelFileUseCase(FakeRepository(result)),
-        excelFileFactory = FakeExcelFileFactory(picked),
-        sessionStore = store
+        excelFileFactory = FakeExcelFileFactory(picked)
     )
 
     @Test
@@ -109,9 +115,8 @@ class UploadViewModelTest {
     }
 
     @Test
-    fun `continue uploads, stores the session and navigates with the job id`() = runTest {
-        val store = ImportSessionStore()
-        val viewModel = viewModel(picked = file(), store = store)
+    fun `continue uploads and navigates with the job id`() = runTest {
+        val viewModel = viewModel(picked = file())
         viewModel.onEvent(UploadEvent.FilePicked("content://media/1"))
         val effects = mutableListOf<UploadEffect>()
         val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
@@ -121,9 +126,7 @@ class UploadViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(false, state.isAnalyzing)
         assertNull(state.uploadError)
-        assertEquals("job-1", store.session?.analysis?.importJobId)
-        assertEquals("products.xlsx", store.session?.file?.displayName)
-        assertEquals(listOf(UploadEffect.NavigateToReview("job-1")), effects)
+        assertEquals(listOf(UploadEffect.NavigateToMapping("job-1")), effects)
         collection.cancel()
     }
 

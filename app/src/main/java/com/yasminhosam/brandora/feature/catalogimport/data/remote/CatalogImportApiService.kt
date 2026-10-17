@@ -4,7 +4,10 @@ import com.yasminhosam.brandora.core.network.ApiEndpoints
 import com.yasminhosam.brandora.core.network.ApiParams
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.Multipart
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
@@ -27,4 +30,15 @@ internal interface CatalogImportApiService {
         @Part file: MultipartBody.Part,
         @Part(ApiParams.PART_SHEET_NAME) sheetName: RequestBody? = null
     ): AnalyzeExcelResponseDto
+
+    @GET(ApiEndpoints.IMPORT_MAPPING)
+    suspend fun getMapping(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String
+    ): MappingResponseDto
+
+    @PATCH(ApiEndpoints.IMPORT_MAPPING)
+    suspend fun confirmMapping(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String,
+        @Body body: ConfirmMappingRequestDto
+    ): ConfirmMappingResponseDto
 }

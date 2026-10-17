@@ -15,6 +15,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.yasminhosam.brandora.core.network.ApiParams
+import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingEffect
+import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingScreen
+import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingViewModel
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadEffect
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadEvent
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadScreen
@@ -26,10 +30,9 @@ object CatalogImportDestinations {
     /** TEMP: placeholder for the future Add Product screen; replaced when that screen lands. */
     const val ADD_PRODUCT = "catalog_import/add_product"
 
-    /** TEMP: replaced by the real review screen . */
-    const val REVIEW = "catalog_import/review/{importJobId}"
+    const val MAPPING = "catalog_import/mapping/{importId}"
 
-    fun review(importJobId: String) = "catalog_import/review/$importJobId"
+    fun mapping(importId: String) = "catalog_import/mapping/$importId"
 }
 
 @Composable
@@ -55,7 +58,7 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
                             uri,
                             Intent.FLAG_GRANT_READ_URI_PERMISSION
                         )
-                    } catch (e: SecurityException) {
+                    } catch (_: SecurityException) {
                         // Providers without persistable grants still read fine this session.
                     }
                     viewModel.onEvent(UploadEvent.FilePicked(uri.toString()))
@@ -65,9 +68,8 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        is UploadEffect.NavigateToReview ->
-                            navController.navigate(CatalogImportDestinations.review(effect.importJobId))
-
+                        is UploadEffect.NavigateToMapping ->
+                            navController.navigate(CatalogImportDestinations.mapping(effect.importId))
                         UploadEffect.NavigateToManualEntry ->
                             navController.navigate(CatalogImportDestinations.ADD_PRODUCT)
                     }
@@ -87,10 +89,24 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
         }
 
         composable(
-            route = CatalogImportDestinations.REVIEW,
-            arguments = listOf(navArgument("importJobId") { type = NavType.StringType })
-        ) { entry ->
-            ReviewPendingScreen(importJobId = entry.arguments?.getString("importJobId").orEmpty())
+            route = CatalogImportDestinations.MAPPING,
+            arguments = listOf(navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType })
+        ) {
+            val viewModel: MappingViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        // TEMP: the validate route lands in the validation slice; until then the
+                        // mapping step just returns so this commit compiles on its own.
+                        is MappingEffect.NavigateToValidate -> navController.popBackStack()
+                        MappingEffect.NavigateBack -> navController.popBackStack()
+                    }
+                }
+            }
+
+            MappingScreen(state = state, onEvent = viewModel::onEvent)
         }
     }
 }

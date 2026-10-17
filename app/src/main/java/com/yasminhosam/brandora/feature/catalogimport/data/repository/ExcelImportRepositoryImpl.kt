@@ -3,6 +3,8 @@ package com.yasminhosam.brandora.feature.catalogimport.data.repository
 import com.yasminhosam.brandora.core.network.ApiConfig
 import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.CatalogImportRemoteDataSource
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
+import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
@@ -22,4 +24,10 @@ class ExcelImportRepositoryImpl @Inject constructor(
             businessId = ApiConfig.CURRENT_BUSINESS_ID,
             sheetName = sheetName
         )
+
+    override suspend fun getMapping(importId: String): ApiResult<MappingPayload> =
+        remote.getMapping(importId)
+
+    override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
+        remote.confirmMapping(importId, columns)
 }
