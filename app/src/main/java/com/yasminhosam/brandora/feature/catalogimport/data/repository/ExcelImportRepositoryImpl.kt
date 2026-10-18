@@ -6,7 +6,10 @@ import com.yasminhosam.brandora.feature.catalogimport.data.remote.CatalogImportR
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import javax.inject.Inject
@@ -37,4 +40,13 @@ class ExcelImportRepositoryImpl @Inject constructor(
 
     override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
         remote.getValidationResults(importId, limit, offset)
+
+    override suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
+        remote.getPreview(importId, limit, offset)
+
+    override suspend fun execute(importId: String): ApiResult<ExecuteResult> =
+        remote.execute(importId)
+
+    override suspend fun getImportStatus(importId: String): ApiResult<ImportJobStatus> =
+        remote.getImportStatus(importId)
 }

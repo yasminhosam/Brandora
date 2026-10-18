@@ -12,6 +12,9 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingInva
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.SavedMapping
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.StandardTarget
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.ConfirmMappingUseCase
@@ -72,6 +75,15 @@ class MappingViewModelTest {
             limit: Int,
             offset: Int
         ): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun execute(importId: String): ApiResult<ExecuteResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getImportStatus(importId: String): ApiResult<ImportJobStatus> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 

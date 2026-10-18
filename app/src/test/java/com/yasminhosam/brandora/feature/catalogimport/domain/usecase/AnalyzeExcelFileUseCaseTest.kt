@@ -8,6 +8,9 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayl
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.SampleRow
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
@@ -49,6 +52,15 @@ class AnalyzeExcelFileUseCaseTest {
             ApiResult.Error(ApiErrorType.UNKNOWN)
 
         override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun execute(importId: String): ApiResult<ExecuteResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getImportStatus(importId: String): ApiResult<ImportJobStatus> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 

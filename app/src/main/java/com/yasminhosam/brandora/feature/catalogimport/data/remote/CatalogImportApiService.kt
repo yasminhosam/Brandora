@@ -54,4 +54,21 @@ internal interface CatalogImportApiService {
         @Query(ApiParams.QUERY_LIMIT) limit: Int,
         @Query(ApiParams.QUERY_OFFSET) offset: Int
     ): ValidationResultsResponseDto
+
+    @GET(ApiEndpoints.IMPORT_PREVIEW)
+    suspend fun getPreview(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String,
+        @Query(ApiParams.QUERY_LIMIT) limit: Int,
+        @Query(ApiParams.QUERY_OFFSET) offset: Int
+    ): PreviewResponseDto
+
+    @POST(ApiEndpoints.IMPORT_EXECUTE)
+    suspend fun execute(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String
+    ): ExecuteResponseDto
+
+    @GET(ApiEndpoints.IMPORT_STATUS)
+    suspend fun getImportStatus(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String
+    ): JobStatusDto
 }

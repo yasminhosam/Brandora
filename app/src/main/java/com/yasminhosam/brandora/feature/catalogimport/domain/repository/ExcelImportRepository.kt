@@ -4,7 +4,10 @@ import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 
 interface ExcelImportRepository {
@@ -23,4 +26,13 @@ interface ExcelImportRepository {
 
     /** Fetches the next page of validation rows. */
     suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult>
+
+    /** Fetches one advisory preview page, recomputed on the backend per request. */
+    suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult>
+
+    /** Runs the import over every row. Synchronous; may leave the job IMPORTING on interruption. */
+    suspend fun execute(importId: String): ApiResult<ExecuteResult>
+
+    /** Reads the persisted job status. Used to recover after an interrupted or failed execute. */
+    suspend fun getImportStatus(importId: String): ApiResult<ImportJobStatus>
 }

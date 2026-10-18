@@ -10,7 +10,10 @@ import com.yasminhosam.brandora.feature.catalogimport.data.mapper.toRequestDto
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import okhttp3.MultipartBody
 import okhttp3.MediaType.Companion.toMediaType
@@ -49,6 +52,15 @@ class CatalogImportRemoteDataSource @Inject constructor(
 
     suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
         errorHandler.safeApiCall { api.getValidationResults(importId, limit, offset) }.map { it.toDomain() }
+
+    suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
+        errorHandler.safeApiCall { api.getPreview(importId, limit, offset) }.map { it.toDomain() }
+
+    suspend fun execute(importId: String): ApiResult<ExecuteResult> =
+        errorHandler.safeApiCall { api.execute(importId) }.map { it.toDomain() }
+
+    suspend fun getImportStatus(importId: String): ApiResult<ImportJobStatus> =
+        errorHandler.safeApiCall { api.getImportStatus(importId) }.map { it.toDomain() }
 }
 
 /**

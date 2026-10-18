@@ -19,6 +19,12 @@ import com.yasminhosam.brandora.core.network.ApiParams
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingEffect
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingScreen
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingViewModel
+import com.yasminhosam.brandora.feature.catalogimport.presentation.preview.PreviewEffect
+import com.yasminhosam.brandora.feature.catalogimport.presentation.preview.PreviewScreen
+import com.yasminhosam.brandora.feature.catalogimport.presentation.preview.PreviewViewModel
+import com.yasminhosam.brandora.feature.catalogimport.presentation.result.ResultEffect
+import com.yasminhosam.brandora.feature.catalogimport.presentation.result.ResultScreen
+import com.yasminhosam.brandora.feature.catalogimport.presentation.result.ResultViewModel
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadEffect
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadEvent
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadScreen
@@ -35,9 +41,13 @@ object CatalogImportDestinations {
 
     const val MAPPING = "catalog_import/mapping/{importId}"
     const val VALIDATE = "catalog_import/validate/{importId}"
+    const val PREVIEW = "catalog_import/preview/{importId}"
+    const val RESULT = "catalog_import/result/{importId}"
 
     fun mapping(importId: String) = "catalog_import/mapping/$importId"
     fun validate(importId: String) = "catalog_import/validate/$importId"
+    fun preview(importId: String) = "catalog_import/preview/$importId"
+    fun result(importId: String) = "catalog_import/result/$importId"
 }
 
 @Composable
@@ -119,16 +129,16 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
         composable(
             route = CatalogImportDestinations.VALIDATE,
             arguments = listOf(navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType })
-        ) {
+        ) { entry ->
+            val importId = entry.arguments?.getString(ApiParams.PATH_IMPORT_ID).orEmpty()
             val viewModel: ValidationViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
 
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        // TEMP: the preview route lands in the preview slice; until then Continue
-                        // returns to upload so this commit compiles on its own.
-                        ValidationEffect.NavigateToPreview -> navController.popBackStack()
+                        ValidationEffect.NavigateToPreview ->
+                            navController.navigate(CatalogImportDestinations.preview(importId))
                         ValidationEffect.NavigateToUpload ->
                             navController.popBackStack(CatalogImportDestinations.UPLOAD, inclusive = false)
                     }
@@ -136,6 +146,48 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
             }
 
             ValidationScreen(state = state, onEvent = viewModel::onEvent)
+        }
+
+        composable(
+            route = CatalogImportDestinations.PREVIEW,
+            arguments = listOf(navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType })
+        ) { entry ->
+            val importId = entry.arguments?.getString(ApiParams.PATH_IMPORT_ID).orEmpty()
+            val viewModel: PreviewViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        is PreviewEffect.NavigateToExecute ->
+                            navController.navigate(CatalogImportDestinations.result(effect.importId)) {
+                                popUpTo(CatalogImportDestinations.PREVIEW) { inclusive = true }
+                            }
+                        PreviewEffect.NavigateBack -> navController.popBackStack()
+                    }
+                }
+            }
+
+            PreviewScreen(state = state, onEvent = viewModel::onEvent)
+        }
+
+        composable(
+            route = CatalogImportDestinations.RESULT,
+            arguments = listOf(navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType })
+        ) { entry ->
+            val viewModel: ResultViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        ResultEffect.NavigateToUpload ->
+                            navController.popBackStack(CatalogImportDestinations.UPLOAD, inclusive = false)
+                    }
+                }
+            }
+
+            ResultScreen(state = state, onEvent = viewModel::onEvent)
         }
     }
 }
