@@ -12,6 +12,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingInva
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.SavedMapping
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.StandardTarget
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.ConfirmMappingUseCase
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.GetMappingUseCase
@@ -63,6 +64,15 @@ class MappingViewModelTest {
             return confirm
         }
 
+        override suspend fun validate(importId: String): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getValidationResults(
+            importId: String,
+            limit: Int,
+            offset: Int
+        ): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 
     private val mainDispatcher = UnconfinedTestDispatcher()

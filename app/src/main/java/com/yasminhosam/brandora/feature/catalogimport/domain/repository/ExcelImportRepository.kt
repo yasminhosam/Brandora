@@ -5,6 +5,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColum
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 
 interface ExcelImportRepository {
 
@@ -16,4 +17,10 @@ interface ExcelImportRepository {
     suspend fun getMapping(importId: String): ApiResult<MappingPayload>
 
     suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit>
+
+    /** Triggers validation on the backend and returns the summary + first page of rows. */
+    suspend fun validate(importId: String): ApiResult<ValidationResult>
+
+    /** Fetches the next page of validation rows. */
+    suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult>
 }

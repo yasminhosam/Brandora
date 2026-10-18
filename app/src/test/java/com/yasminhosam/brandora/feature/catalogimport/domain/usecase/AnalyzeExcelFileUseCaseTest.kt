@@ -1,4 +1,4 @@
-﻿package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
+package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
 
 import com.yasminhosam.brandora.core.network.ApiConfig
 import com.yasminhosam.brandora.core.network.ApiErrorType
@@ -9,6 +9,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.SampleRow
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -44,6 +45,11 @@ class AnalyzeExcelFileUseCaseTest {
         override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
 
+        override suspend fun validate(importId: String): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 
     private fun file(

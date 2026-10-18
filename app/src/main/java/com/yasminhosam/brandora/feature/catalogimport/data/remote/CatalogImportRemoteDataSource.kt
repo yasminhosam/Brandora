@@ -11,6 +11,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColum
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import okhttp3.MultipartBody
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -42,6 +43,12 @@ class CatalogImportRemoteDataSource @Inject constructor(
 
     suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
         errorHandler.safeApiCall { api.confirmMapping(importId, columns.toRequestDto()) }.map { }
+
+    suspend fun validate(importId: String): ApiResult<ValidationResult> =
+        errorHandler.safeApiCall { api.validate(importId) }.map { it.toDomain() }
+
+    suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+        errorHandler.safeApiCall { api.getValidationResults(importId, limit, offset) }.map { it.toDomain() }
 }
 
 /**

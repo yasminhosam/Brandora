@@ -34,7 +34,7 @@ class CatalogImportApiServiceTest {
         .build()
 
     private fun analyzeMethod(): Method =
-        CatalogImportApiService::class.java.declaredMethods.single { it.isAnnotationPresent(POST::class.java) }
+        CatalogImportApiService::class.java.declaredMethods.single { it.name == "analyze" }
 
     @Test
     fun `retrofit accepts the service`() {

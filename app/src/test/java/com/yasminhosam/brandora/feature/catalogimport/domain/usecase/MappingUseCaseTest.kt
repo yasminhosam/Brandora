@@ -1,4 +1,4 @@
-﻿package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
+package com.yasminhosam.brandora.feature.catalogimport.domain.usecase
 
 import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
@@ -10,6 +10,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.SavedMappin
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.StandardTarget
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -43,6 +44,11 @@ class MappingUseCaseTest {
             return confirm
         }
 
+        override suspend fun validate(importId: String): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 
     private fun column(choice: MappingChoice = MappingChoice.Standard(StandardTarget.NAME)) =

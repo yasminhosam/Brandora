@@ -7,6 +7,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColum
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import javax.inject.Inject
 
@@ -30,4 +31,10 @@ class ExcelImportRepositoryImpl @Inject constructor(
 
     override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
         remote.confirmMapping(importId, columns)
+
+    override suspend fun validate(importId: String): ApiResult<ValidationResult> =
+        remote.validate(importId)
+
+    override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+        remote.getValidationResults(importId, limit, offset)
 }

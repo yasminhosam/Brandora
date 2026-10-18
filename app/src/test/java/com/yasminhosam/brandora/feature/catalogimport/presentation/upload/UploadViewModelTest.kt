@@ -1,4 +1,4 @@
-﻿package com.yasminhosam.brandora.feature.catalogimport.presentation.upload
+package com.yasminhosam.brandora.feature.catalogimport.presentation.upload
 
 import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
@@ -9,6 +9,7 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.SampleRow
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
 import com.yasminhosam.brandora.feature.catalogimport.domain.usecase.AnalyzeExcelFileUseCase
 import kotlinx.coroutines.Dispatchers
@@ -55,6 +56,11 @@ class UploadViewModelTest {
         override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
 
+        override suspend fun validate(importId: String): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
+
+        override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
+            ApiResult.Error(ApiErrorType.UNKNOWN)
     }
 
     private val mainDispatcher = UnconfinedTestDispatcher()

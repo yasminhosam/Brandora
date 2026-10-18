@@ -23,6 +23,9 @@ import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.Upload
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadEvent
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadScreen
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadViewModel
+import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationEffect
+import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationScreen
+import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationViewModel
 
 object CatalogImportDestinations {
     const val UPLOAD = "catalog_import/upload"
@@ -31,8 +34,10 @@ object CatalogImportDestinations {
     const val ADD_PRODUCT = "catalog_import/add_product"
 
     const val MAPPING = "catalog_import/mapping/{importId}"
+    const val VALIDATE = "catalog_import/validate/{importId}"
 
     fun mapping(importId: String) = "catalog_import/mapping/$importId"
+    fun validate(importId: String) = "catalog_import/validate/$importId"
 }
 
 @Composable
@@ -98,15 +103,39 @@ fun CatalogImportNavHost(modifier: Modifier = Modifier) {
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        // TEMP: the validate route lands in the validation slice; until then the
-                        // mapping step just returns so this commit compiles on its own.
-                        is MappingEffect.NavigateToValidate -> navController.popBackStack()
+                        is MappingEffect.NavigateToValidate ->
+                            navController.navigate(CatalogImportDestinations.validate(effect.importId)) {
+                                // Validation starts on entry; mapping is no longer reachable.
+                                popUpTo(CatalogImportDestinations.MAPPING) { inclusive = true }
+                            }
                         MappingEffect.NavigateBack -> navController.popBackStack()
                     }
                 }
             }
 
             MappingScreen(state = state, onEvent = viewModel::onEvent)
+        }
+
+        composable(
+            route = CatalogImportDestinations.VALIDATE,
+            arguments = listOf(navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType })
+        ) {
+            val viewModel: ValidationViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        // TEMP: the preview route lands in the preview slice; until then Continue
+                        // returns to upload so this commit compiles on its own.
+                        ValidationEffect.NavigateToPreview -> navController.popBackStack()
+                        ValidationEffect.NavigateToUpload ->
+                            navController.popBackStack(CatalogImportDestinations.UPLOAD, inclusive = false)
+                    }
+                }
+            }
+
+            ValidationScreen(state = state, onEvent = viewModel::onEvent)
         }
     }
 }

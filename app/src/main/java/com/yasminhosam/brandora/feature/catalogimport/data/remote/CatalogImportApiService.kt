@@ -11,6 +11,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Internal: built with retrofit.create() inside the data source, because an internal type in a
@@ -41,4 +42,16 @@ internal interface CatalogImportApiService {
         @Path(ApiParams.PATH_IMPORT_ID) importId: String,
         @Body body: ConfirmMappingRequestDto
     ): ConfirmMappingResponseDto
+
+    @POST(ApiEndpoints.IMPORT_VALIDATE)
+    suspend fun validate(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String
+    ): ValidateResponseDto
+
+    @GET(ApiEndpoints.IMPORT_VALIDATE_RESULTS)
+    suspend fun getValidationResults(
+        @Path(ApiParams.PATH_IMPORT_ID) importId: String,
+        @Query(ApiParams.QUERY_LIMIT) limit: Int,
+        @Query(ApiParams.QUERY_OFFSET) offset: Int
+    ): ValidationResultsResponseDto
 }
