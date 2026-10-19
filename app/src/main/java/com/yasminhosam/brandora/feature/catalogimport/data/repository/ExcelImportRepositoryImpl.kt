@@ -1,7 +1,8 @@
 package com.yasminhosam.brandora.feature.catalogimport.data.repository
 
-import com.yasminhosam.brandora.core.network.ApiConfig
+import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
+import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.CatalogImportRemoteDataSource
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
@@ -12,22 +13,28 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStat
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.repository.ExcelImportRepository
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
- * The only reader of [ApiConfig.CURRENT_BUSINESS_ID]; when real auth arrives, only the value
- * source here changes.
+ * Reads the business id from [CurrentBusinessStore] (Preferences DataStore). When real auth
+ * arrives, only the value source here changes. analyze() refuses to call the backend without
+ * a business id rather than sending a placeholder.
  */
 class ExcelImportRepositoryImpl @Inject constructor(
-    private val remote: CatalogImportRemoteDataSource
+    private val remote: CatalogImportRemoteDataSource,
+    private val currentBusinessStore: CurrentBusinessStore
 ) : ExcelImportRepository {
 
-    override suspend fun analyze(file: ExcelFile, sheetName: String?): ApiResult<ImportAnalysis> =
-        remote.analyze(
+    override suspend fun analyze(file: ExcelFile, sheetName: String?): ApiResult<ImportAnalysis> {
+        val businessId = currentBusinessStore.businessId.first()
+            ?: return ApiResult.Error(ApiErrorType.UNKNOWN)
+        return remote.analyze(
             file = file,
-            businessId = ApiConfig.CURRENT_BUSINESS_ID,
+            businessId = businessId,
             sheetName = sheetName
         )
+    }
 
     override suspend fun getMapping(importId: String): ApiResult<MappingPayload> =
         remote.getMapping(importId)

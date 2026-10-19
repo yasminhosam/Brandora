@@ -16,6 +16,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yasminhosam.brandora.core.network.ApiParams
+import com.yasminhosam.brandora.feature.business.presentation.BusinessEffect
+import com.yasminhosam.brandora.feature.business.presentation.BusinessScreen
+import com.yasminhosam.brandora.feature.business.presentation.BusinessViewModel
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingEffect
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingScreen
 import com.yasminhosam.brandora.feature.catalogimport.presentation.mapping.MappingViewModel
@@ -36,6 +39,8 @@ import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.Va
 object CatalogImportDestinations {
     const val UPLOAD = "catalog_import/upload"
 
+    const val BUSINESS_CREATE = "catalog_import/business/create"
+
     /** TEMP: placeholder for the future Add Product screen; replaced when that screen lands. */
     const val ADD_PRODUCT = "catalog_import/add_product"
 
@@ -51,13 +56,38 @@ object CatalogImportDestinations {
 }
 
 @Composable
-fun CatalogImportNavHost(modifier: Modifier = Modifier) {
+fun CatalogImportNavHost(
+    modifier: Modifier = Modifier,
+    startDestination: String = CatalogImportDestinations.UPLOAD
+) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = CatalogImportDestinations.UPLOAD,
+        startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(CatalogImportDestinations.BUSINESS_CREATE) {
+            val viewModel: BusinessViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        is BusinessEffect.BusinessCreated ->
+                            navController.navigate(CatalogImportDestinations.UPLOAD) {
+                                // The business is created once; drop the create screen from the back stack.
+                                popUpTo(CatalogImportDestinations.BUSINESS_CREATE) { inclusive = true }
+                            }
+                    }
+                }
+            }
+
+            BusinessScreen(
+                state = state,
+                onEvent = viewModel::onEvent
+            )
+        }
+
         composable(CatalogImportDestinations.UPLOAD) {
             val viewModel: UploadViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()

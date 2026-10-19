@@ -6,15 +6,13 @@ object ApiConfig {
     // Comes from brandora.baseUrl in local.properties (always ends with '/').
     val BASE_URL: String get() = BuildConfig.BASE_URL
 
-    // Single read point; the value comes from brandora.businessId in local.properties.
-    val CURRENT_BUSINESS_ID: String get() = BuildConfig.CURRENT_BUSINESS_ID
-
     const val MAX_UPLOAD_BYTES = 10L * 1024 * 1024 // Excel limit: 10 MiB (backend returns 413 above it)
     const val DEFAULT_LIMIT = 20
     const val DEFAULT_OFFSET = 0
 }
 
 object ApiEndpoints {
+    const val BUSINESSES = "businesses"                                          // POST (create)
     const val CATALOG_ITEMS = "catalog-items"                                    // POST (create), GET (list)
 
     // Excel import flow: analyze -> mapping -> validate -> preview -> execute

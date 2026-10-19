@@ -21,10 +21,6 @@ fun localProperty(key: String, default: String): String =
         ?.takeIf { it.isNotEmpty() }
         ?: default
 
-// brandora.businessId=<uuid>
-val currentBusinessId: String =
-    localProperty("brandora.businessId", "00000000-0000-0000-0000-000000000000")
-
 // brandora.baseUrl=http://192.168.1.104:3000/
 // Default targets the Android emulator's alias for the host machine.
 // Retrofit requires the base URL to end with '/', so it is normalized here.
@@ -47,7 +43,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        buildConfigField("String", "CURRENT_BUSINESS_ID", "\"$currentBusinessId\"")
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
