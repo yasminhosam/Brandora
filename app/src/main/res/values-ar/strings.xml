@@ -117,4 +117,17 @@
     <string name="result_start_over_hint">ارفع ملفك مرة أخرى لبدء استيراد جديد.</string>
     <string name="result_error_execution_conflict">تغيّر هذا المنتج في مكان آخر أثناء الاستيراد، لذا لم يُطبَّق هذا الصف.</string>
     <string name="result_error_execution_generic">تعذّر تطبيق هذا الصف.</string>
+    <!-- Business creation -->
+    <string name="business_title">أنشئ نشاطك التجاري</string>
+    <string name="business_subtitle">تخصّص منتجاتك واستيراد ملفاتك هذا النشاط التجاري.</string>
+    <string name="business_name_label">اسم النشاط التجاري</string>
+    <string name="business_name_required">اسم النشاط التجاري مطلوب.</string>
+    <string name="business_name_too_long">يجب ألا يتجاوز اسم النشاط التجاري 200 حرف.</string>
+    <string name="business_description_label">الوصف</string>
+    <string name="business_category_label">الفئة</string>
+    <string name="business_phone_label">رقم الهاتف</string>
+    <string name="business_address_label">العنوان</string>
+    <string name="business_optional">اختياري</string>
+    <string name="business_create">إنشاء النشاط التجاري</string>
+    <string name="business_creating">جارٍ الإنشاء…</string>
 </resources>

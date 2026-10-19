@@ -117,4 +117,18 @@
     <string name="result_start_over_hint">Upload your file again to start a new import.</string>
     <string name="result_error_execution_conflict">This product changed elsewhere while importing, so this row wasn\'t applied.</string>
     <string name="result_error_execution_generic">This row couldn\'t be applied.</string>
+
+    <!-- Business creation -->
+    <string name="business_title">Create your business</string>
+    <string name="business_subtitle">Your products and imports belong to this business.</string>
+    <string name="business_name_label">Business name</string>
+    <string name="business_name_required">Business name is required.</string>
+    <string name="business_name_too_long">Business name must be 200 characters or fewer.</string>
+    <string name="business_description_label">Description</string>
+    <string name="business_category_label">Category</string>
+    <string name="business_phone_label">Phone</string>
+    <string name="business_address_label">Address</string>
+    <string name="business_optional">Optional</string>
+    <string name="business_create">Create business</string>
+    <string name="business_creating">Creating…</string>
 </resources>
