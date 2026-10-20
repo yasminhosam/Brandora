@@ -11,6 +11,8 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationRow
 sealed interface ResultEvent : UiEvent {
     data object RetryClicked : ResultEvent
     data object DoneClicked : ResultEvent
+    /** Re-run execute to check the current status of a stuck/pending import. */
+    data object CheckStatusClicked : ResultEvent
 }
 
 data class ResultUiState(
@@ -39,4 +41,7 @@ data class ResultUiState(
 
 sealed interface ResultEffect : UiEffect {
     data object NavigateToUpload : ResultEffect
+
+    /** Import completed successfully - navigate to the (temp) home screen. */
+    data object NavigateToHome : ResultEffect
 }

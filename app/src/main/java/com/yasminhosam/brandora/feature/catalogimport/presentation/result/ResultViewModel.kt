@@ -26,7 +26,12 @@ class ResultViewModel @Inject constructor(
     override fun onEvent(event: ResultEvent) {
         when (event) {
             ResultEvent.RetryClicked -> runImport()
-            ResultEvent.DoneClicked -> sendEffect(ResultEffect.NavigateToUpload)
+            ResultEvent.CheckStatusClicked -> runImport()
+            ResultEvent.DoneClicked -> if (uiState.value.isCompleted || uiState.value.isPartial) {
+                sendEffect(ResultEffect.NavigateToHome)
+            } else {
+                sendEffect(ResultEffect.NavigateToUpload)
+            }
         }
     }
 
@@ -35,15 +40,20 @@ class ResultViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = executeImport(importId)) {
                 is ApiResult.Success -> when (val outcome = result.data) {
-                    is ExecuteOutcome.Performed -> setState {
-                        copy(
-                            isLoading = false,
-                            status = outcome.result.status,
-                            counts = outcome.result.counts,
-                            invalidRows = outcome.result.invalidRows,
-                            failedRows = outcome.result.failedRows,
-                            hasRowDetail = true
-                        )
+                    is ExecuteOutcome.Performed -> {
+                        val status = outcome.result.status
+                        setState {
+                            copy(
+                                isLoading = false,
+                                status = status,
+                                counts = outcome.result.counts,
+                                invalidRows = outcome.result.invalidRows,
+                                failedRows = outcome.result.failedRows,
+                                hasRowDetail = true
+                            )
+                        }
+                        // Stay on the result screen; navigation home happens only when the
+                        // user taps Done (see ResultEvent.DoneClicked).
                     }
 
                     is ExecuteOutcome.Recovered -> setState {

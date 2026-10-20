@@ -46,7 +46,7 @@
     <string name="mapping_error_key_format">Use lowercase English letters, digits or _, starting with a letter</string>
     <string name="mapping_error_key_duplicate">This key is already used by another column</string>
     <string name="mapping_error_name_required">Pick the column that holds the Product Name</string>
-    <string name="mapping_warn_sku">No SKU column mapped — re-importing will create duplicates instead of updating products</string>
+    <string name="mapping_warn_sku">No SKU column mapped — re-importing may create duplicates instead of updating products</string>
     <string name="mapping_confirm">Confirm mapping</string>
     <string name="mapping_back">Back</string>
     <string name="mapping_empty">No columns found in this sheet</string>
@@ -93,6 +93,8 @@
     <string name="preview_badge_invalid">Invalid</string>
     <string name="preview_execute_hint">Importing runs on every row in the file, not only the ones shown here.</string>
     <string name="preview_import">Start import</string>
+    <string name="preview_warn_all_new">No existing products will be updated — all valid rows will be added as new products.</string>
+    <string name="preview_confirm_all_new_title">Import %1$d rows as new products?</string>
     <!-- Catalog import: execute + result screen -->
     <string name="result_title">Import result</string>
     <string name="result_completed_title">Import complete</string>
@@ -115,6 +117,7 @@
     <string name="result_done">Done</string>
     <string name="result_start_over">Start over</string>
     <string name="result_start_over_hint">Upload your file again to start a new import.</string>
+    <string name="result_check_status">Check status</string>
     <string name="result_error_execution_conflict">This product changed elsewhere while importing, so this row wasn\'t applied.</string>
     <string name="result_error_execution_generic">This row couldn\'t be applied.</string>
 
@@ -131,4 +134,24 @@
     <string name="business_optional">Optional</string>
     <string name="business_create">Create business</string>
     <string name="business_creating">Creating…</string>
+
+    <!-- Temp home screen -->
+    <string name="home_title">Home</string>
+    <string name="home_subtitle">Your catalog is ready.</string>
+    <string name="import_success">Import successful</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_orders">Orders</string>
+    <string name="nav_products">Products</string>
+
+    <!-- Placeholder screens -->
+    <string name="dashboard_title">Dashboard</string>
+    <string name="dashboard_subtitle">Dashboard coming soon.</string>
+    <string name="orders_title">Orders</string>
+    <string name="orders_subtitle">Orders coming soon.</string>
+    <string name="products_title">Products</string>
+    <string name="products_subtitle">Products coming soon.</string>
+    <string name="products_reimport">Re-import catalog</string>
 </resources>

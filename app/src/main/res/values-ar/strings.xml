@@ -46,7 +46,7 @@
     <string name="mapping_error_key_format">استخدم حروفًا إنجليزية صغيرة أو أرقامًا أو _، وابدأ بحرف</string>
     <string name="mapping_error_key_duplicate">هذا المفتاح مستخدم في عمود آخر</string>
     <string name="mapping_error_name_required">اختر العمود الذي يحتوي على اسم المنتج</string>
-    <string name="mapping_warn_sku">لم يتم ربط عمود SKU — إعادة الاستيراد ستنشئ منتجات مكررة بدلًا من تحديثها</string>
+    <string name="mapping_warn_sku">لم يتم ربط رمز المنتج (SKU) — قد يؤدي إعادة الاستيراد إلى إضافة منتجات مكررة بدلًا من تحديثها</string>
     <string name="mapping_confirm">تأكيد المطابقة</string>
     <string name="mapping_back">رجوع</string>
     <string name="mapping_empty">لا توجد أعمدة في هذه الورقة</string>
@@ -93,6 +93,8 @@
     <string name="preview_badge_invalid">غير صالح</string>
     <string name="preview_execute_hint">الاستيراد يشمل كل صفوف الملف، وليس فقط المعروضة هنا.</string>
     <string name="preview_import">بدء الاستيراد</string>
+    <string name="preview_warn_all_new">لن يتم تحديث أي منتجات موجودة — سيتم إضافة جميع الصفوف الصالحة كمنتجات جديدة.</string>
+    <string name="preview_confirm_all_new_title">استيراد %1$d صف كمنتجات جديدة؟</string>
     <!-- Catalog import: execute + result screen -->
     <string name="result_title">نتيجة الاستيراد</string>
     <string name="result_completed_title">تم الاستيراد</string>
@@ -115,6 +117,7 @@
     <string name="result_done">تم</string>
     <string name="result_start_over">البدء من جديد</string>
     <string name="result_start_over_hint">ارفع ملفك مرة أخرى لبدء استيراد جديد.</string>
+    <string name="result_check_status">تحقق من الحالة</string>
     <string name="result_error_execution_conflict">تغيّر هذا المنتج في مكان آخر أثناء الاستيراد، لذا لم يُطبَّق هذا الصف.</string>
     <string name="result_error_execution_generic">تعذّر تطبيق هذا الصف.</string>
     <!-- Business creation -->
@@ -130,4 +133,24 @@
     <string name="business_optional">اختياري</string>
     <string name="business_create">إنشاء النشاط التجاري</string>
     <string name="business_creating">جارٍ الإنشاء…</string>
+
+    <!-- Temp home screen -->
+    <string name="home_title">الرئيسية</string>
+    <string name="home_subtitle">كتالوجك جاهز.</string>
+    <string name="import_success">تم الاستيراد بنجاح</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_dashboard">لوحة القيادة</string>
+    <string name="nav_orders">الطلبات</string>
+    <string name="nav_products">المنتجات</string>
+
+    <!-- Placeholder screens -->
+    <string name="dashboard_title">لوحة القيادة</string>
+    <string name="dashboard_subtitle">لوحة القيادة قادمة قريبًا.</string>
+    <string name="orders_title">الطلبات</string>
+    <string name="orders_subtitle">الطلبات قادمة قريبًا.</string>
+    <string name="products_title">المنتجات</string>
+    <string name="products_subtitle">المنتجات قادمة قريبًا.</string>
+    <string name="products_reimport">إعادة استيراد الكتالوج</string>
 </resources>

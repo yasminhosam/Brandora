@@ -35,11 +35,18 @@ class ValidationViewModel @Inject constructor(
     }
 
     private fun load() {
+        // Skip re-triggering validation when it is already READY (e.g. ViewModel restored after
+        // process death or re-navigation back to this screen). A repeat POST can return HTTP 409.
+        if (uiState.value.isValidationReady) {
+            loadFirstPage()
+            return
+        }
         setState { copy(isLoading = true, errorRes = null) }
         viewModelScope.launch {
             when (val result = startValidation(importId)) {
                 is ApiResult.Success -> setState {
                     copy(
+                        status = result.data.status,
                         summary = result.data.summary,
                         totalCount = result.data.page.totalCount,
                         nextOffset = result.data.page.nextOffset,

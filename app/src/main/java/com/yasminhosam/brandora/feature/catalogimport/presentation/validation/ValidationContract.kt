@@ -3,6 +3,7 @@ package com.yasminhosam.brandora.feature.catalogimport.presentation.validation
 import com.yasminhosam.brandora.core.base.UiEffect
 import com.yasminhosam.brandora.core.base.UiEvent
 import com.yasminhosam.brandora.core.base.UiState
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationRow
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationSummary
 
@@ -15,6 +16,7 @@ sealed interface ValidationEvent : UiEvent {
 
 data class ValidationUiState(
     val isLoading: Boolean = true,
+    val status: ImportStatus? = null,
     val summary: ValidationSummary? = null,
     val rows: List<ValidationRow> = emptyList(),
     val totalCount: Int = 0,
@@ -30,6 +32,9 @@ data class ValidationUiState(
 
     /** Import proceeds with the valid subset; blocked only when nothing is importable. */
     val canContinue: Boolean get() = isReady && (summary?.validRows ?: 0) > 0
+
+    /** True when validation has already reached READY; skip re-triggering startValidation. */
+    val isValidationReady: Boolean get() = status == ImportStatus.READY
 }
 
 sealed interface ValidationEffect : UiEffect {

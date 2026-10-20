@@ -54,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
+import com.yasminhosam.brandora.core.ui.theme.extended
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingChoice
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingInvalidReason
@@ -67,7 +68,11 @@ fun MappingScreen(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    val warning = MaterialTheme.extended.warning
+    val showSkuWarning = !state.isSkuMapped
+
     Column(
+        // Edge-to-edge: keep content clear of the status and gesture bars.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)
@@ -197,18 +202,18 @@ fun MappingScreen(
                         }
                         Spacer(Modifier.height(8.dp))
                     }
-                    if (!state.isSkuMapped) {
+                    if (showSkuWarning) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp)
-                                .background(scheme.tertiaryContainer, RoundedCornerShape(12.dp))
+                                .background(warning.container, RoundedCornerShape(12.dp))
                                 .padding(12.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.mapping_warn_sku),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onTertiaryContainer
+                                color = warning.content
                             )
                         }
                         Spacer(Modifier.height(8.dp))

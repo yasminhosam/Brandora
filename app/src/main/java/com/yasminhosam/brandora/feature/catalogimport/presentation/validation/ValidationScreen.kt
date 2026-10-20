@@ -52,6 +52,7 @@ fun ValidationScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
+        // Edge-to-edge: keep content clear of the status and gesture bars.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)

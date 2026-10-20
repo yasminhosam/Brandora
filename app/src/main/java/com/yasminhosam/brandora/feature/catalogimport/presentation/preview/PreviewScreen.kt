@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +31,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -53,7 +58,12 @@ fun PreviewScreen(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    // Backend-computed truth: nothing will match the existing catalog, so every valid row
+    // becomes a new product. Confirm before executing — same rule from every entry point.
+    val allNewOnly = state.summary?.let { it.willUpdate == 0 && it.willInsert > 0 } == true
+    val showAllNewConfirm = remember { mutableStateOf(false) }
     Column(
+        // Edge-to-edge: keep content clear of the status and gesture bars.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)
@@ -120,6 +130,14 @@ fun PreviewScreen(
                         AdvisoryBanner()
                         Spacer(Modifier.height(8.dp))
                         state.summary?.let { SummaryCard(it, state.totalCount) }
+                        // Warn when every valid row will be inserted as a new product (nothing will
+                        // be updated). Only meaningful when there is something to insert.
+                        state.summary?.let { summary ->
+                            if (summary.willUpdate == 0 && summary.willInsert > 0) {
+                                Spacer(Modifier.height(8.dp))
+                                AllNewWarning()
+                            }
+                        }
                         Spacer(Modifier.height(4.dp))
                     }
                     items(state.items, key = { it.rowNumber }) { item -> PreviewRow(item) }
@@ -162,7 +180,13 @@ fun PreviewScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                     Button(
-                        onClick = { onEvent(PreviewEvent.ImportClicked) },
+                        onClick = {
+                            if (allNewOnly) {
+                                showAllNewConfirm.value = true
+                            } else {
+                                onEvent(PreviewEvent.ImportClicked)
+                            }
+                        },
                         enabled = state.isReady,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(16.dp)
@@ -176,6 +200,17 @@ fun PreviewScreen(
                 }
             }
         }
+    }
+
+    if (showAllNewConfirm.value) {
+        AllNewConfirmDialog(
+            insertCount = state.summary?.willInsert ?: 0,
+            onDismiss = { showAllNewConfirm.value = false },
+            onConfirm = {
+                showAllNewConfirm.value = false
+                onEvent(PreviewEvent.ImportClicked)
+            }
+        )
     }
 }
 
@@ -341,6 +376,73 @@ private fun ActionBadge(action: PreviewAction) {
     ) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = content)
     }
+}
+
+/** Warning shown when all valid rows will be inserted as new products (no updates). */
+@Composable
+private fun AllNewWarning() {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(scheme.tertiaryContainer, RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            tint = scheme.onTertiaryContainer,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.preview_warn_all_new),
+            style = MaterialTheme.typography.bodySmall,
+            color = scheme.onTertiaryContainer
+        )
+    }
+}
+
+/**
+ * Blocking confirmation shown before executing an import where nothing will be updated —
+ * decided from the backend's own insert/update counts, not from which screen opened the flow.
+ */
+@Composable
+private fun AllNewConfirmDialog(
+    insertCount: Int,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(text = stringResource(R.string.preview_import))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.mapping_back))
+            }
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.preview_confirm_all_new_title, insertCount),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = scheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.preview_warn_all_new),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant
+            )
+        }
+    )
 }
 
 @Preview(showBackground = true)

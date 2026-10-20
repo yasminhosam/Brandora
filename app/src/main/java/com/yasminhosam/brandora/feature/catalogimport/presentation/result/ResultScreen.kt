@@ -57,6 +57,7 @@ fun ResultScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
+        // Edge-to-edge: keep content clear of the status and gesture bars.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)
@@ -137,7 +138,22 @@ fun ResultScreen(
                 }
 
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                    if (state.isJobGone || state.isStuck || state.isFailed) {
+                    if (state.errorRes != null && !state.isTerminal) {
+                        // Recoverable error state - offer retry, not a terminal-success action.
+                        Text(
+                            text = stringResource(state.errorRes),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.error
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = { onEvent(ResultEvent.RetryClicked) },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(text = stringResource(R.string.action_retry))
+                        }
+                    } else if (state.isJobGone || state.isFailed) {
                         Text(
                             text = stringResource(R.string.result_start_over_hint),
                             style = MaterialTheme.typography.bodySmall,
@@ -155,7 +171,27 @@ fun ResultScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
+                    } else if (state.isStuck) {
+                        // Pending operation - offer to check status rather than start over.
+                        Text(
+                            text = stringResource(R.string.result_stuck_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = { onEvent(ResultEvent.CheckStatusClicked) },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.result_check_status),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     } else {
+                        // Terminal success (completed or partial) - Done goes home.
                         Button(
                             onClick = { onEvent(ResultEvent.DoneClicked) },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
