@@ -21,7 +21,6 @@ fun localProperty(key: String, default: String): String =
         ?.takeIf { it.isNotEmpty() }
         ?: default
 
-// brandora.baseUrl=http://192.168.1.104:3000/
 // Default targets the Android emulator's alias for the host machine.
 // Retrofit requires the base URL to end with '/', so it is normalized here.
 val baseUrl: String =
