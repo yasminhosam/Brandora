@@ -15,6 +15,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.navigation.Routes
+import com.yasminhosam.brandora.feature.auth.presentation.login.LoginEffect
+import com.yasminhosam.brandora.feature.auth.presentation.login.LoginScreen
+import com.yasminhosam.brandora.feature.auth.presentation.login.LoginViewModel
 import com.yasminhosam.brandora.feature.business.presentation.BusinessEffect
 import com.yasminhosam.brandora.feature.business.presentation.BusinessScreen
 import com.yasminhosam.brandora.feature.business.presentation.BusinessViewModel
@@ -38,6 +41,27 @@ fun AppNavHost(
     val importDoneMessage = stringResource(R.string.import_success)
 
     NavHost(nav, startDestination = startDestination, modifier = modifier) {
+
+        composable(Routes.LOGIN) {
+            val viewModel: LoginViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        is LoginEffect.LoginSucceeded -> {
+                            // Business Create (when no business exists yet) keeps its
+                            // existing post-create flow; Home is the normal landing.
+                            nav.navigate(effect.nextRoute) {
+                                popUpTo(Routes.LOGIN) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+            }
+
+            LoginScreen(state = state, onEvent = viewModel::onEvent)
+        }
 
         composable(Routes.BUSINESS_CREATE) {
             val viewModel: BusinessViewModel = hiltViewModel()

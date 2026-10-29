@@ -15,25 +15,58 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yasminhosam.brandora.app.AppNavHost
 import com.yasminhosam.brandora.core.navigation.Routes
+import com.yasminhosam.brandora.core.network.SessionExpiredSignal
+import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
 import kotlinx.coroutines.flow.first
 
 @Composable
-fun BrandoraRoot(currentBusinessStore: CurrentBusinessStore) {
+fun BrandoraRoot(
+    currentBusinessStore: CurrentBusinessStore,
+    sessionStore: SessionStore,
+    sessionExpiredSignal: SessionExpiredSignal
+) {
     val nav = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val backStackEntry by nav.currentBackStackEntryAsState()
+    val sessionExpiredMessage = stringResource(R.string.session_expired)
 
-    // Wait for the first real DataStore value before choosing the start screen.
+    // Wait for the first real values before choosing the start screen: no session means
+    // Login; with a session the existing business gate decides Home vs Business Create.
     var startDestination by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        startDestination =
-            if (currentBusinessStore.businessId.first() == null) Routes.BUSINESS_CREATE
-            else Routes.HOME
+        startDestination = when {
+            sessionStore.session.first() == null -> Routes.LOGIN
+            currentBusinessStore.businessId.first() == null -> Routes.BUSINESS_CREATE
+            else -> Routes.HOME
+        }
+    }
+
+    // Session expiry (refresh rejected or its response lost) lands on Login from anywhere,
+    // with one snackbar. The stack is fully cleared first, because popUpTo(start) silently
+    // no-ops when the start destination isn't on the back stack (a real case: the process
+    // started at Login, the user logged in, so Login itself is long gone). popBackStack()
+    // only removes the top entry, so walk down to the bottom entry and let the navigate()'s
+    // popUpTo remove that one too: Login ends up as the ONLY entry, and system back exits
+    // the app instead of revealing a session-less screen behind it. Navigation runs before
+    // the (suspending) snackbar so the redirect is immediate; the host survives it.
+    LaunchedEffect(Unit) {
+        sessionExpiredSignal.events.collect {
+            while (nav.previousBackStackEntry != null) {
+                if (!nav.popBackStack()) break
+            }
+            val bottomId = nav.currentBackStackEntry?.destination?.id
+            nav.navigate(Routes.LOGIN) {
+                if (bottomId != null) popUpTo(bottomId) { inclusive = true }
+                launchSingleTop = true
+            }
+            snackbarHostState.showSnackbar(sessionExpiredMessage)
+        }
     }
 
     Scaffold(

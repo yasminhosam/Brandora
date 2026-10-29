@@ -15,6 +15,15 @@ object ApiEndpoints {
     const val BUSINESSES = "businesses"                                          // POST (create)
     const val CATALOG_ITEMS = "catalog-items"                                    // POST (create), GET (list)
 
+    // Auth: these routes are public (no Bearer header). Only login and refresh are
+    // implemented so far; the rest are declared so the interceptor can skip them later.
+    const val AUTH_REGISTER = "auth/register"                                    // POST
+    const val AUTH_LOGIN = "auth/login"                                          // POST
+    const val AUTH_REFRESH = "auth/refresh"                                      // POST (single-use refresh token)
+    const val AUTH_LOGOUT = "auth/logout"                                        // POST
+    const val AUTH_FORGOT_PASSWORD = "auth/forgot-password"                      // POST
+    const val AUTH_RESET_PASSWORD = "auth/reset-password"                        // POST
+
     // Excel import flow: analyze -> mapping -> validate -> preview -> execute
     const val IMPORT_ANALYZE = "businesses/{businessId}/imports/excel/analyze"   // POST multipart
     const val IMPORT_MAPPING = "imports/{importId}/mapping"                      // GET suggestions, PATCH confirm
@@ -76,6 +85,15 @@ object ImportRowActions {
 }
 
 // Stable backend identifiers for client-side localization. Never show or parse "message".
+object AuthErrorCodes {
+    // 401 on POST /auth/login with wrong email/password.
+    const val INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
+    // 401 on POST /auth/refresh: refresh token expired/used/revoked -> clear session.
+    const val AUTH_REFRESH_INVALID = "AUTH_REFRESH_INVALID"
+    // 429 on any auth route: surface the typed error, honoring Retry-After (numeric seconds).
+    const val AUTH_RATE_LIMITED = "AUTH_RATE_LIMITED"
+}
+
 object ImportErrorCodes {
     const val MAPPING_NAME_REQUIRED = "MAPPING_NAME_REQUIRED"
     const val MAPPING_SOURCE_INVALID = "MAPPING_SOURCE_INVALID"

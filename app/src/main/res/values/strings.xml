@@ -27,6 +27,7 @@
     <string name="import_add_product_title">Add product</string>
     <string name="import_add_product_placeholder">The manual product screen will live here.</string>
     <string name="error_invalid_file_type">That file type isn\'t supported. Please choose an .xlsx file.</string>
+    <string name="error_auth_rate_limited">Too many attempts. Please wait a moment and try again.</string>
 
     <!-- Catalog import: column mapping screen -->
     <string name="mapping_title">Match your columns</string>
@@ -134,6 +135,16 @@
     <string name="business_optional">Optional</string>
     <string name="business_create">Create business</string>
     <string name="business_creating">Creating…</string>
+
+    <!-- Login -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Log in to manage your catalog.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_action">Log in</string>
+    <string name="login_in_progress">Logging in…</string>
+    <string name="login_invalid_credentials">Incorrect email or password.</string>
+    <string name="session_expired">Your session has expired. Please log in again.</string>
 
     <!-- Temp home screen -->
     <string name="home_title">Home</string>

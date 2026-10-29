@@ -5,12 +5,13 @@ sealed interface ApiResult<out T> {
         val type: ApiErrorType,
         val code: Int? = null, // HTTP status
         val message: String?=null,
-        val errorCode: String? = null // backend's stable code, e.g. IMPORT_MAPPING_CHANGED
+        val errorCode: String? = null, // backend's stable code, e.g. IMPORT_MAPPING_CHANGED
+        val retryAfterSeconds: Long? = null // from the Retry-After header, numeric seconds only
     ) : ApiResult<Nothing>
 }
 enum class ApiErrorType {
     NETWORK, TIMEOUT, UNAUTHORIZED, BAD_REQUEST, NOT_FOUND,
-    CONFLICT, FILE_TOO_LARGE, INVALID_FILE_TYPE, SERVER, UNKNOWN
+    CONFLICT, FILE_TOO_LARGE, INVALID_FILE_TYPE, AUTH_RATE_LIMITED, SERVER, UNKNOWN
 }
 
 inline fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> = when (this) {

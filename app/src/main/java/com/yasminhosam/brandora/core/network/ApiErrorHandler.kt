@@ -34,7 +34,11 @@ class ApiErrorHandler @Inject constructor(
                     type = typeFor(statusCode),
                     code = statusCode,
                     message = apiError?.readableMessage(),
-                    errorCode = apiError?.code)
+                    errorCode = apiError?.code,
+                    // Retry-After is only meaningful with the rate-limit contract; any other
+                    // status sending the header must not make the field look actionable.
+                    retryAfterSeconds = if (statusCode == 429) retryAfterSeconds(error) else null
+                )
 
             }
 
@@ -64,7 +68,15 @@ class ApiErrorHandler @Inject constructor(
         404 -> ApiErrorType.NOT_FOUND
         409 -> ApiErrorType.CONFLICT
         413 -> ApiErrorType.FILE_TOO_LARGE
+        429 -> ApiErrorType.AUTH_RATE_LIMITED
         in 500..599 -> ApiErrorType.SERVER
         else -> ApiErrorType.UNKNOWN
     }
+
+    /**
+     * The backend sends Retry-After as numeric seconds. An HTTP-date or an unparseable
+     * value is treated as absent - the caller shows a generic rate-limit message.
+     */
+    private fun retryAfterSeconds(error: HttpException): Long? =
+        error.response()?.headers()?.get("Retry-After")?.trim()?.toLongOrNull()
 }

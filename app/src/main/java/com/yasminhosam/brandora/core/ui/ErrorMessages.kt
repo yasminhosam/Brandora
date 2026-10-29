@@ -22,6 +22,7 @@ fun ApiErrorType.messageRes(): Int = when (this) {
     ApiErrorType.CONFLICT -> R.string.error_conflict
     ApiErrorType.FILE_TOO_LARGE -> R.string.error_file_too_large
     ApiErrorType.INVALID_FILE_TYPE -> R.string.error_invalid_file_type
+    ApiErrorType.AUTH_RATE_LIMITED -> R.string.error_auth_rate_limited
     ApiErrorType.SERVER -> R.string.error_server
     ApiErrorType.UNKNOWN -> R.string.error_unknown
 }

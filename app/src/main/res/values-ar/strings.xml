@@ -27,6 +27,7 @@
     <string name="import_add_product_title">إضافة منتج</string>
     <string name="import_add_product_placeholder">ستكون شاشة إضافة المنتج هنا.</string>
     <string name="error_invalid_file_type">نوع الملف غير مدعوم. يرجى اختيار ملف ‎.xlsx‎.</string>
+    <string name="error_auth_rate_limited">محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.</string>
 
     <!-- Catalog import: column mapping screen -->
     <string name="mapping_title">طابق الأعمدة</string>
@@ -133,6 +134,16 @@
     <string name="business_optional">اختياري</string>
     <string name="business_create">إنشاء النشاط التجاري</string>
     <string name="business_creating">جارٍ الإنشاء…</string>
+
+    <!-- Login -->
+    <string name="login_title">مرحباً بعودتك</string>
+    <string name="login_subtitle">سجّل الدخول لإدارة كتالوجك.</string>
+    <string name="login_email_label">البريد الإلكتروني</string>
+    <string name="login_password_label">كلمة المرور</string>
+    <string name="login_action">تسجيل الدخول</string>
+    <string name="login_in_progress">جارٍ تسجيل الدخول…</string>
+    <string name="login_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة.</string>
+    <string name="session_expired">انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.</string>
 
     <!-- Temp home screen -->
     <string name="home_title">الرئيسية</string>
