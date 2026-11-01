@@ -28,6 +28,7 @@
     <string name="import_add_product_placeholder">The manual product screen will live here.</string>
     <string name="error_invalid_file_type">That file type isn\'t supported. Please choose an .xlsx file.</string>
     <string name="error_auth_rate_limited">Too many attempts. Please wait a moment and try again.</string>
+    <string name="error_auth_rate_limit_unavailable">The service is temporarily unavailable. Please try again shortly.</string>
 
     <!-- Catalog import: column mapping screen -->
     <string name="mapping_title">Match your columns</string>
@@ -136,7 +137,7 @@
     <string name="business_create">Create business</string>
     <string name="business_creating">Creating…</string>
 
-    <!-- Login -->
+    <!-- Auth: login + register -->
     <string name="login_title">Welcome back</string>
     <string name="login_subtitle">Log in to manage your catalog.</string>
     <string name="login_email_label">Email</string>
@@ -145,6 +146,23 @@
     <string name="login_in_progress">Logging in…</string>
     <string name="login_invalid_credentials">Incorrect email or password.</string>
     <string name="session_expired">Your session has expired. Please log in again.</string>
+    <string name="login_link_register">Don\'t have an account? Sign up</string>
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Sign up to start managing your catalog.</string>
+    <string name="register_action">Sign up</string>
+    <string name="register_in_progress">Creating account…</string>
+    <string name="register_link_login">Already have an account? Log in</string>
+    <string name="register_password_requirements">At least 12 characters with an uppercase letter, a lowercase letter, and a digit.</string>
+    <!-- Auth: local validation + rate-limit cooldowns -->
+    <string name="auth_field_required">This field is required.</string>
+    <string name="auth_email_invalid">Enter a valid email address.</string>
+    <string name="auth_email_too_long">Email must be 254 characters or fewer.</string>
+    <string name="auth_email_unavailable">This email is already registered.</string>
+    <string name="auth_password_too_short">Password must be at least 12 characters.</string>
+    <string name="auth_password_too_long">Password must be 128 characters or fewer.</string>
+    <string name="auth_password_complexity">Add an uppercase letter, a lowercase letter, and a digit.</string>
+    <string name="auth_rate_limited_retry">Too many attempts. Try again in %1$d s.</string>
+    <string name="auth_rate_limit_unavailable_retry">The service is busy. Try again in %1$d s.</string>
 
     <!-- Temp home screen -->
     <string name="home_title">Home</string>

@@ -25,6 +25,9 @@ class SessionRefresherTest {
         var refreshCalls = 0
             private set
 
+        override suspend fun register(email: String, password: String): ApiResult<AuthSession> =
+            error("not under test")
+
         override suspend fun login(email: String, password: String): ApiResult<AuthSession> =
             error("not under test")
 

@@ -13,7 +13,8 @@ import javax.inject.Inject
 /**
  * Session persistence rules, the heart of the single-use refresh-token contract:
  *
- * - login/refresh success  -> save the new session (rotated tokens) before returning.
+ * - login/register success -> save the new session (rotated tokens) before returning;
+ *                             a failed call never touches the stored session.
  * - refresh rejected       -> AUTH_REFRESH_INVALID means the token was used/revoked;
  *                             clear the session and let the caller surface Login.
  * - refresh response lost  -> NETWORK/TIMEOUT: the backend may have consumed the token
@@ -26,6 +27,12 @@ class AuthRepositoryImpl @Inject constructor(
     private val sessionStore: SessionStore,
     private val expiredSignal: SessionExpiredSignal
 ) : AuthRepository {
+
+    override suspend fun register(email: String, password: String): ApiResult<AuthSession> =
+        remote.register(email, password).also { result ->
+            // A rejected registration (email taken, validation) must not log anyone out.
+            if (result is ApiResult.Success) sessionStore.save(result.data)
+        }
 
     override suspend fun login(email: String, password: String): ApiResult<AuthSession> =
         remote.login(email, password).also { result ->

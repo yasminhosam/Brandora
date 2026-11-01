@@ -236,6 +236,41 @@ class AuthRepositoryImplTest {
         assertTrue(refreshBody!!.contains("\"refreshToken\":\"refresh-old\""))
     }
 
+    @Test
+    fun `a successful register persists the session (201)`() = runBlocking {
+        val backend = FakeBackend().apply {
+            respond = { request -> response(request, 201, sessionResponse("at-1", "rt-1")) }
+        }
+        val store = FakeSessionStore()
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.register("a@b.c", "Secret1Abcdefg")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals("at-1", store.session.value?.accessToken)
+        assertEquals("rt-1", store.session.value?.refreshToken)
+        assertEquals(1, store.saves)
+    }
+
+    @Test
+    fun `a rejected registration leaves any existing session untouched`() = runBlocking {
+        val backend = FakeBackend().apply {
+            respond = { request ->
+                response(request, 409, errorBody(409, AuthErrorCodes.EMAIL_UNAVAILABLE))
+            }
+        }
+        val store = FakeSessionStore(OLD)
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.register("taken@b.c", "Secret1Abcdefg")
+
+        assertTrue(result is ApiResult.Error)
+        assertEquals(AuthErrorCodes.EMAIL_UNAVAILABLE, (result as ApiResult.Error).errorCode)
+        assertEquals(OLD.accessToken, store.session.value?.accessToken)
+        assertEquals(0, store.saves)
+        assertEquals(0, store.clears)
+    }
+
     private companion object {
         val OLD = AuthSession(
             user = AuthUser(id = "u1"),

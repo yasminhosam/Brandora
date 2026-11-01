@@ -20,8 +20,9 @@ internal data class SessionDto(
     val refreshExpiresAt: String? = null
 )
 
+/** The {email, password} body shared by POST /auth/login and POST /auth/register. */
 @Serializable
-internal data class LoginRequestDto(
+internal data class CredentialsRequestDto(
     val email: String,
     val password: String
 )

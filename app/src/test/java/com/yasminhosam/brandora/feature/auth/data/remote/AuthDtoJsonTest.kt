@@ -93,12 +93,13 @@ class AuthDtoJsonTest {
     }
 
     @Test
-    fun `the login body matches the contract`() {
+    fun `the credentials body matches the contract on both auth routes`() {
         val encoded = json.encodeToString(
-            LoginRequestDto.serializer(),
-            LoginRequestDto(email = "a@b.c", password = "secret")
+            CredentialsRequestDto.serializer(),
+            CredentialsRequestDto(email = "a@b.c", password = "secret")
         )
 
+        // Exactly the two contract fields - nothing else may leak into the request.
         assertEquals("""{"email":"a@b.c","password":"secret"}""", encoded)
     }
 }

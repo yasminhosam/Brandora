@@ -19,9 +19,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,21 +35,31 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yasminhosam.brandora.R
+import com.yasminhosam.brandora.core.ui.cooldownMessageRes
 import com.yasminhosam.brandora.core.ui.messageRes
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
+import com.yasminhosam.brandora.feature.auth.presentation.fieldMessageRes
 
 /**
- * Minimal login: email + password posted to POST /auth/login. On success the nav host
- * reuses the existing business gate (businessId present -> Home, else Business Create).
- * A 401 INVALID_CREDENTIALS shows the inline message instead of the generic error.
+ * Login: email + password posted to POST /auth/login, with local validation shown under
+ * each field (required on blur/erase, syntax on submit). On success the nav host reuses
+ * the existing business gate (businessId present -> Home, else Business Create). A 401
+ * INVALID_CREDENTIALS shows the inline message instead of the generic error; a 429/503
+ * disables submit while the cooldown counts down.
  */
 @Composable
 fun LoginScreen(
     state: LoginUiState,
     onEvent: (LoginEvent) -> Unit,
+    onRegisterClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    // The focus observer fires once on composition; only a loss of focus the field actually
+    // held counts as a blur, so untouched fields show no required note.
+    var emailHeldFocus by remember { mutableStateOf(false) }
+    var passwordHeldFocus by remember { mutableStateOf(false) }
+
     Column(
         // Edge-to-edge: keep content clear of the status and gesture bars.
         modifier = modifier
@@ -72,23 +88,57 @@ fun LoginScreen(
             value = state.email,
             onValueChange = { onEvent(LoginEvent.EmailChanged(it)) },
             label = { Text(text = stringResource(R.string.login_email_label)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focus ->
+                    if (focus.isFocused) {
+                        emailHeldFocus = true
+                    } else if (emailHeldFocus) {
+                        emailHeldFocus = false
+                        onEvent(LoginEvent.EmailFocusLost)
+                    }
+                },
             singleLine = true,
-            isError = state.invalidCredentials,
+            isError = state.invalidCredentials || state.emailError != null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
+        state.emailError?.let { error ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(error.fieldMessageRes()),
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.error
+            )
+        }
         Spacer(Modifier.height(16.dp))
 
         OutlinedTextField(
             value = state.password,
             onValueChange = { onEvent(LoginEvent.PasswordChanged(it)) },
             label = { Text(text = stringResource(R.string.login_password_label)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focus ->
+                    if (focus.isFocused) {
+                        passwordHeldFocus = true
+                    } else if (passwordHeldFocus) {
+                        passwordHeldFocus = false
+                        onEvent(LoginEvent.PasswordFocusLost)
+                    }
+                },
             singleLine = true,
-            isError = state.invalidCredentials,
+            isError = state.invalidCredentials || state.passwordError != null,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
+        state.passwordError?.let { error ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(error.fieldMessageRes()),
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.error
+            )
+        }
 
         if (state.invalidCredentials) {
             Spacer(Modifier.height(4.dp))
@@ -109,9 +159,19 @@ fun LoginScreen(
             Spacer(Modifier.height(12.dp))
         }
 
+        state.cooldown?.let { cooldown ->
+            Text(
+                text = stringResource(cooldown.type.cooldownMessageRes(), cooldown.seconds),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.error
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+
         Button(
             onClick = { onEvent(LoginEvent.SubmitClicked) },
-            enabled = !state.isSubmitting,
+            // Blank fields, an in-flight request and a running cooldown all disable submit.
+            enabled = state.canSubmit,
             modifier = Modifier.fillMaxWidth().height(52.dp)
         ) {
             if (state.isSubmitting) {
@@ -138,6 +198,13 @@ fun LoginScreen(
         }
 
         Spacer(Modifier.height(20.dp))
+        TextButton(
+            onClick = onRegisterClick,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(text = stringResource(R.string.login_link_register))
+        }
+        Spacer(Modifier.height(12.dp))
     }
 }
 

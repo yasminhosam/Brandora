@@ -23,8 +23,17 @@ fun ApiErrorType.messageRes(): Int = when (this) {
     ApiErrorType.FILE_TOO_LARGE -> R.string.error_file_too_large
     ApiErrorType.INVALID_FILE_TYPE -> R.string.error_invalid_file_type
     ApiErrorType.AUTH_RATE_LIMITED -> R.string.error_auth_rate_limited
+    ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE -> R.string.error_auth_rate_limit_unavailable
     ApiErrorType.SERVER -> R.string.error_server
     ApiErrorType.UNKNOWN -> R.string.error_unknown
+}
+
+/** Countdown copy for a running rate-limit cooldown; takes the remaining seconds. */
+@StringRes
+fun ApiErrorType.cooldownMessageRes(): Int = when (this) {
+    ApiErrorType.AUTH_RATE_LIMITED -> R.string.auth_rate_limited_retry
+    ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE -> R.string.auth_rate_limit_unavailable_retry
+    else -> messageRes()
 }
 
 @StringRes

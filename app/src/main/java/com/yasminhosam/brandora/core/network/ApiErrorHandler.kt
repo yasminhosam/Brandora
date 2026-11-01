@@ -30,14 +30,25 @@ class ApiErrorHandler @Inject constructor(
                 val apiError= parseErrorBody(
                     error.response()?.errorBody()?.string()
                 )
+                // The backend's stable code outranks the status: a 503 carrying
+                // AUTH_RATE_LIMIT_UNAVAILABLE gets the cooldown contract, while any
+                // other 503 stays the generic server error.
+                val type = if (apiError?.code == AuthErrorCodes.AUTH_RATE_LIMIT_UNAVAILABLE) {
+                    ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
+                } else {
+                    typeFor(statusCode)
+                }
                 ApiResult.Error(
-                    type = typeFor(statusCode),
+                    type = type,
                     code = statusCode,
                     message = apiError?.readableMessage(),
                     errorCode = apiError?.code,
-                    // Retry-After is only meaningful with the rate-limit contract; any other
-                    // status sending the header must not make the field look actionable.
-                    retryAfterSeconds = if (statusCode == 429) retryAfterSeconds(error) else null
+                    // Retry-After is only actionable for the rate-limit contract: the 429
+                    // and the 503 with its stable code. Any other status sending the header
+                    // must not make the field look actionable.
+                    retryAfterSeconds = if (
+                        statusCode == 429 || type == ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
+                    ) retryAfterSeconds(error) else null
                 )
 
             }

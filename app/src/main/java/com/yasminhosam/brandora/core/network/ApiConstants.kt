@@ -9,6 +9,9 @@ object ApiConfig {
     const val MAX_UPLOAD_BYTES = 10L * 1024 * 1024 // Excel limit: 10 MiB (backend returns 413 above it)
     const val DEFAULT_LIMIT = 20
     const val DEFAULT_OFFSET = 0
+
+    // Cooldown assumed when a 429/503 arrives without a usable Retry-After (numeric seconds).
+    const val RATE_LIMIT_FALLBACK_SECONDS = 30L
 }
 
 object ApiEndpoints {
@@ -86,12 +89,18 @@ object ImportRowActions {
 
 // Stable backend identifiers for client-side localization. Never show or parse "message".
 object AuthErrorCodes {
+    // 400 on POST /auth/register (and /auth/login): the backend rejected the field values.
+    const val VALIDATION_ERROR = "VALIDATION_ERROR"
+    // 409 on POST /auth/register: the address is already taken.
+    const val EMAIL_UNAVAILABLE = "EMAIL_UNAVAILABLE"
     // 401 on POST /auth/login with wrong email/password.
     const val INVALID_CREDENTIALS = "INVALID_CREDENTIALS"
     // 401 on POST /auth/refresh: refresh token expired/used/revoked -> clear session.
     const val AUTH_REFRESH_INVALID = "AUTH_REFRESH_INVALID"
     // 429 on any auth route: surface the typed error, honoring Retry-After (numeric seconds).
     const val AUTH_RATE_LIMITED = "AUTH_RATE_LIMITED"
+    // 503 on auth routes: same cooldown contract as the 429, keyed by this code.
+    const val AUTH_RATE_LIMIT_UNAVAILABLE = "AUTH_RATE_LIMIT_UNAVAILABLE"
 }
 
 object ImportErrorCodes {

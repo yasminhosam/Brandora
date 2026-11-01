@@ -88,4 +88,63 @@ class ApiErrorHandlerTest {
         assertEquals(ApiErrorType.NETWORK, handler.handle(IOException("offline")).type)
         assertEquals(ApiErrorType.TIMEOUT, handler.handle(java.net.SocketTimeoutException()).type)
     }
+
+    @Test
+    fun `503 with the auth code maps to AUTH_RATE_LIMIT_UNAVAILABLE and parses Retry-After`() {
+        val body = """{"statusCode":503,"code":"AUTH_RATE_LIMIT_UNAVAILABLE","message":"x","error":"Service Unavailable"}"""
+        val result = handler.handle(httpException(503, body, retryAfter = "20"))
+
+        assertEquals(ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE, result.type)
+        assertEquals(AuthErrorCodes.AUTH_RATE_LIMIT_UNAVAILABLE, result.errorCode)
+        assertEquals(20L, result.retryAfterSeconds)
+    }
+
+    @Test
+    fun `a plain 503 stays SERVER without a cooldown`() {
+        val body = """{"statusCode":503,"code":"SOMETHING_ELSE","message":"x","error":"Service Unavailable"}"""
+        val result = handler.handle(httpException(503, body, retryAfter = "9"))
+
+        assertEquals(ApiErrorType.SERVER, result.type)
+        assertNull(result.retryAfterSeconds)
+    }
+
+    @Test
+    fun `a bodyless 503 stays SERVER`() {
+        val result = handler.handle(httpException(503))
+
+        assertEquals(ApiErrorType.SERVER, result.type)
+        assertNull(result.retryAfterSeconds)
+    }
+
+    @Test
+    fun `a non-numeric Retry-After on the 503 contract is treated as absent`() {
+        val body = """{"statusCode":503,"code":"AUTH_RATE_LIMIT_UNAVAILABLE","message":"x","error":"Service Unavailable"}"""
+        val result = handler.handle(httpException(503, body, retryAfter = "soon"))
+
+        assertEquals(ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE, result.type)
+        assertNull(result.retryAfterSeconds)
+    }
+
+    @Test
+    fun `AUTH_RATE_LIMIT_UNAVAILABLE has a localized message`() {
+        assertEquals(
+            R.string.error_auth_rate_limit_unavailable,
+            ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE.messageRes()
+        )
+    }
+
+    @Test
+    fun `400 VALIDATION_ERROR and 409 EMAIL_UNAVAILABLE keep their stable codes`() {
+        val badRequest = handler.handle(
+            httpException(400, """{"statusCode":400,"code":"VALIDATION_ERROR","message":"x","error":"Bad Request"}""")
+        )
+        assertEquals(ApiErrorType.BAD_REQUEST, badRequest.type)
+        assertEquals(AuthErrorCodes.VALIDATION_ERROR, badRequest.errorCode)
+
+        val conflict = handler.handle(
+            httpException(409, """{"statusCode":409,"code":"EMAIL_UNAVAILABLE","message":"x","error":"Conflict"}""")
+        )
+        assertEquals(ApiErrorType.CONFLICT, conflict.type)
+        assertEquals(AuthErrorCodes.EMAIL_UNAVAILABLE, conflict.errorCode)
+    }
 }

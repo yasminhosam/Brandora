@@ -44,6 +44,14 @@ class AuthApiServiceTest {
     }
 
     @Test
+    fun `register posts to the auth register route`() {
+        val post = method("register").getAnnotation(POST::class.java)
+
+        assertNotNull("register must carry @POST", post)
+        assertEquals(ApiEndpoints.AUTH_REGISTER, post?.value)
+    }
+
+    @Test
     fun `refresh posts to the auth refresh route`() {
         val post = method("refresh").getAnnotation(POST::class.java)
 
@@ -52,14 +60,17 @@ class AuthApiServiceTest {
     }
 
     @Test
-    fun `both methods send a JSON body`() {
+    fun `all three methods send a JSON body`() {
         // Index 0, not single(): a suspend function's hidden Continuation parameter adds a
         // second entry to parameterAnnotations/parameterTypes.
+        val registerBody = method("register").parameterAnnotations[0].filterIsInstance<Body>().single()
         val loginBody = method("login").parameterAnnotations[0].filterIsInstance<Body>().single()
         val refreshBody = method("refresh").parameterAnnotations[0].filterIsInstance<Body>().single()
 
-        assertEquals(LoginRequestDto::class.java, method("login").parameterTypes[0])
+        assertEquals(CredentialsRequestDto::class.java, method("register").parameterTypes[0])
+        assertEquals(CredentialsRequestDto::class.java, method("login").parameterTypes[0])
         assertEquals(RefreshRequestDto::class.java, method("refresh").parameterTypes[0])
+        assertNotNull(registerBody)
         assertNotNull(loginBody)
         assertNotNull(refreshBody)
     }

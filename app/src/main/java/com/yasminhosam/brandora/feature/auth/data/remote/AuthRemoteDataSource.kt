@@ -20,8 +20,13 @@ class AuthRemoteDataSource @Inject constructor(
 
     private val api: AuthApiService = retrofit.create(AuthApiService::class.java)
 
+    suspend fun register(email: String, password: String): ApiResult<AuthSession> =
+        errorHandler.safeApiCall {
+            api.register(CredentialsRequestDto(email = email, password = password))
+        }.map { it.toDomain() }
+
     suspend fun login(email: String, password: String): ApiResult<AuthSession> =
-        errorHandler.safeApiCall { api.login(LoginRequestDto(email = email, password = password)) }
+        errorHandler.safeApiCall { api.login(CredentialsRequestDto(email = email, password = password)) }
             .map { it.toDomain() }
 
     suspend fun refresh(refreshToken: String): ApiResult<AuthSession> =

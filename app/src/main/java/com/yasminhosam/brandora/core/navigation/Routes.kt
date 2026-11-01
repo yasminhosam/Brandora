@@ -3,6 +3,7 @@ package com.yasminhosam.brandora.core.navigation
 object Routes {
     // Auth
     const val LOGIN = "login"
+    const val REGISTER = "register"
 
     // Onboarding
     const val BUSINESS_CREATE = "business/create"

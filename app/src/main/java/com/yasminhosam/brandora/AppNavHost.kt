@@ -18,6 +18,9 @@ import com.yasminhosam.brandora.core.navigation.Routes
 import com.yasminhosam.brandora.feature.auth.presentation.login.LoginEffect
 import com.yasminhosam.brandora.feature.auth.presentation.login.LoginScreen
 import com.yasminhosam.brandora.feature.auth.presentation.login.LoginViewModel
+import com.yasminhosam.brandora.feature.auth.presentation.register.RegisterEffect
+import com.yasminhosam.brandora.feature.auth.presentation.register.RegisterScreen
+import com.yasminhosam.brandora.feature.auth.presentation.register.RegisterViewModel
 import com.yasminhosam.brandora.feature.business.presentation.BusinessEffect
 import com.yasminhosam.brandora.feature.business.presentation.BusinessScreen
 import com.yasminhosam.brandora.feature.business.presentation.BusinessViewModel
@@ -60,7 +63,41 @@ fun AppNavHost(
                 }
             }
 
-            LoginScreen(state = state, onEvent = viewModel::onEvent)
+            LoginScreen(
+                state = state,
+                onEvent = viewModel::onEvent,
+                onRegisterClick = { nav.navigate(Routes.REGISTER) }
+            )
+        }
+
+        composable(Routes.REGISTER) {
+            val viewModel: RegisterViewModel = hiltViewModel()
+            val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            LaunchedEffect(viewModel) {
+                viewModel.effects.collect { effect ->
+                    when (effect) {
+                        is RegisterEffect.RegisterSucceeded -> {
+                            // Register always sits directly above Login: pop both so Back
+                            // can't return to an auth form once the session exists.
+                            nav.navigate(effect.nextRoute) {
+                                popUpTo(Routes.LOGIN) { inclusive = true }
+                            }
+                        }
+                    }
+                }
+            }
+
+            RegisterScreen(
+                state = state,
+                onEvent = viewModel::onEvent,
+                onLoginClick = {
+                    // Pop back to Login; the fallback only runs if it isn't underneath.
+                    if (!nav.popBackStack()) {
+                        nav.navigate(Routes.LOGIN) { launchSingleTop = true }
+                    }
+                }
+            )
         }
 
         composable(Routes.BUSINESS_CREATE) {
