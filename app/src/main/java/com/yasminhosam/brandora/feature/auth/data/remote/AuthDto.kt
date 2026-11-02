@@ -27,6 +27,19 @@ internal data class CredentialsRequestDto(
     val password: String
 )
 
+/** The {email} body of POST /auth/forgot-password (public; the reply never confirms delivery). */
+@Serializable
+internal data class ForgotPasswordRequestDto(
+    val email: String
+)
+
+/** The {token, newPassword} body of POST /auth/reset-password; the token comes from the app link. */
+@Serializable
+internal data class ResetPasswordRequestDto(
+    val token: String,
+    val newPassword: String
+)
+
 @Serializable
 internal data class RefreshRequestDto(
     val refreshToken: String

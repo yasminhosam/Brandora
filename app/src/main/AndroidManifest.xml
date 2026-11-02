@@ -16,12 +16,27 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Brandora"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Password-reset App Link: exact scheme + host + path, token in the URI
+                 fragment (#token=...). autoVerify opens it without a chooser once the
+                 server hosts assetlinks.json for the release signing fingerprint. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="brandora-backend-production-85ec.up.railway.app"
+                    android:path="/auth/reset-password" />
             </intent-filter>
         </activity>
     </application>

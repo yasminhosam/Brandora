@@ -24,6 +24,7 @@ fun ApiErrorType.messageRes(): Int = when (this) {
     ApiErrorType.INVALID_FILE_TYPE -> R.string.error_invalid_file_type
     ApiErrorType.AUTH_RATE_LIMITED -> R.string.error_auth_rate_limited
     ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE -> R.string.error_auth_rate_limit_unavailable
+    ApiErrorType.AUTH_EMAIL_UNAVAILABLE -> R.string.error_auth_email_unavailable
     ApiErrorType.SERVER -> R.string.error_server
     ApiErrorType.UNKNOWN -> R.string.error_unknown
 }

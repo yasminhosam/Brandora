@@ -31,12 +31,15 @@ class ApiErrorHandler @Inject constructor(
                     error.response()?.errorBody()?.string()
                 )
                 // The backend's stable code outranks the status: a 503 carrying
-                // AUTH_RATE_LIMIT_UNAVAILABLE gets the cooldown contract, while any
+                // AUTH_RATE_LIMIT_UNAVAILABLE gets the cooldown contract, AUTH_EMAIL_UNAVAILABLE
+                // gets its own typed message (no Retry-After: it is not a cooldown), while any
                 // other 503 stays the generic server error.
-                val type = if (apiError?.code == AuthErrorCodes.AUTH_RATE_LIMIT_UNAVAILABLE) {
-                    ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
-                } else {
-                    typeFor(statusCode)
+                val type = when (apiError?.code) {
+                    AuthErrorCodes.AUTH_RATE_LIMIT_UNAVAILABLE ->
+                        ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
+                    AuthErrorCodes.AUTH_EMAIL_UNAVAILABLE ->
+                        ApiErrorType.AUTH_EMAIL_UNAVAILABLE
+                    else -> typeFor(statusCode)
                 }
                 ApiResult.Error(
                     type = type,

@@ -102,4 +102,24 @@ class AuthDtoJsonTest {
         // Exactly the two contract fields - nothing else may leak into the request.
         assertEquals("""{"email":"a@b.c","password":"secret"}""", encoded)
     }
+
+    @Test
+    fun `the forgot body carries only the email`() {
+        val encoded = json.encodeToString(
+            ForgotPasswordRequestDto.serializer(),
+            ForgotPasswordRequestDto(email = "a@b.c")
+        )
+
+        assertEquals("""{"email":"a@b.c"}""", encoded)
+    }
+
+    @Test
+    fun `the reset body carries only the token and the new password`() {
+        val encoded = json.encodeToString(
+            ResetPasswordRequestDto.serializer(),
+            ResetPasswordRequestDto(token = "tok-1", newPassword = "Secret1Abcdefg")
+        )
+
+        assertEquals("""{"token":"tok-1","newPassword":"Secret1Abcdefg"}""", encoded)
+    }
 }

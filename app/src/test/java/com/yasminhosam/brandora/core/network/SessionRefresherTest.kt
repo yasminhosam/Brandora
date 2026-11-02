@@ -35,6 +35,12 @@ class SessionRefresherTest {
             refreshCalls++
             return onRefresh()
         }
+
+        override suspend fun forgotPassword(email: String): ApiResult<Unit> =
+            error("not under test")
+
+        override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
+            error("not under test")
     }
 
     @Test

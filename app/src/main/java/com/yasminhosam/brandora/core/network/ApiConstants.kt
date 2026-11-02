@@ -101,6 +101,10 @@ object AuthErrorCodes {
     const val AUTH_RATE_LIMITED = "AUTH_RATE_LIMITED"
     // 503 on auth routes: same cooldown contract as the 429, keyed by this code.
     const val AUTH_RATE_LIMIT_UNAVAILABLE = "AUTH_RATE_LIMIT_UNAVAILABLE"
+    // 503 on POST /auth/forgot-password: the backend has no mail provider configured.
+    const val AUTH_EMAIL_UNAVAILABLE = "AUTH_EMAIL_UNAVAILABLE"
+    // 400 on POST /auth/reset-password: the token is expired/used/superseded/invalid.
+    const val AUTH_RESET_INVALID = "AUTH_RESET_INVALID"
 }
 
 object ImportErrorCodes {

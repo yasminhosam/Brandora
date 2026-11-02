@@ -32,4 +32,12 @@ class AuthRemoteDataSource @Inject constructor(
     suspend fun refresh(refreshToken: String): ApiResult<AuthSession> =
         errorHandler.safeApiCall { api.refresh(RefreshRequestDto(refreshToken = refreshToken)) }
             .map { it.toDomain() }
+
+    suspend fun forgotPassword(email: String): ApiResult<Unit> =
+        errorHandler.safeApiCall { api.forgotPassword(ForgotPasswordRequestDto(email = email)) }
+
+    suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
+        errorHandler.safeApiCall {
+            api.resetPassword(ResetPasswordRequestDto(token = token, newPassword = newPassword))
+        }
 }

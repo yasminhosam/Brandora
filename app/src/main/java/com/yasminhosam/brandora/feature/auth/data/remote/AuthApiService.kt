@@ -8,9 +8,12 @@ import retrofit2.http.POST
  * Internal: built with retrofit.create() inside the data source, because an internal type in
  * a Hilt provider signature breaks Dagger's generated callers through Kotlin name mangling.
  *
- * register (201), login (200) and refresh exist; forgot/reset/logout arrive with their
- * screens. All routes here are public: they use the short-timeout auth Retrofit instance and
+ * All auth routes here are public: they use the short-timeout auth Retrofit instance and
  * never carry an Authorization header.
+ *
+ * forgot (200 with a generic message we deliberately ignore) and reset (204 No Content)
+ * return Unit: Retrofit's built-in Unit converter closes a 200 body without parsing it, and
+ * the suspend Unit path accepts the null body of a 204. Backend message text is never shown.
  */
 internal interface AuthApiService {
 
@@ -22,4 +25,10 @@ internal interface AuthApiService {
 
     @POST(ApiEndpoints.AUTH_REFRESH)
     suspend fun refresh(@Body body: RefreshRequestDto): SessionDto
+
+    @POST(ApiEndpoints.AUTH_FORGOT_PASSWORD)
+    suspend fun forgotPassword(@Body body: ForgotPasswordRequestDto)
+
+    @POST(ApiEndpoints.AUTH_RESET_PASSWORD)
+    suspend fun resetPassword(@Body body: ResetPasswordRequestDto)
 }

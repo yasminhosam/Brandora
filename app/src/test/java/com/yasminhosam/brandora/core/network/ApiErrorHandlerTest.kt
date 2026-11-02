@@ -134,6 +134,25 @@ class ApiErrorHandlerTest {
     }
 
     @Test
+    fun `503 with AUTH_EMAIL_UNAVAILABLE maps to its own type, never a cooldown`() {
+        val body = """{"statusCode":503,"code":"AUTH_EMAIL_UNAVAILABLE","message":"x","error":"Service Unavailable"}"""
+        val result = handler.handle(httpException(503, body, retryAfter = "20"))
+
+        assertEquals(ApiErrorType.AUTH_EMAIL_UNAVAILABLE, result.type)
+        assertEquals(AuthErrorCodes.AUTH_EMAIL_UNAVAILABLE, result.errorCode)
+        // Not part of the rate-limit contract: the header must not disable anything.
+        assertNull(result.retryAfterSeconds)
+    }
+
+    @Test
+    fun `AUTH_EMAIL_UNAVAILABLE has a localized message`() {
+        assertEquals(
+            R.string.error_auth_email_unavailable,
+            ApiErrorType.AUTH_EMAIL_UNAVAILABLE.messageRes()
+        )
+    }
+
+    @Test
     fun `400 VALIDATION_ERROR and 409 EMAIL_UNAVAILABLE keep their stable codes`() {
         val badRequest = handler.handle(
             httpException(400, """{"statusCode":400,"code":"VALIDATION_ERROR","message":"x","error":"Bad Request"}""")

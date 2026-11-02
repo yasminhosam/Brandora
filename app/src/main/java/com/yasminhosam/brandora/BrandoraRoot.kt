@@ -20,8 +20,10 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yasminhosam.brandora.app.AppNavHost
 import com.yasminhosam.brandora.core.navigation.Routes
+import com.yasminhosam.brandora.core.navigation.clearTo
 import com.yasminhosam.brandora.core.network.SessionExpiredSignal
 import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
+import com.yasminhosam.brandora.feature.auth.presentation.reset.ResetTokenHolder
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
 import kotlinx.coroutines.flow.first
 
@@ -29,7 +31,8 @@ import kotlinx.coroutines.flow.first
 fun BrandoraRoot(
     currentBusinessStore: CurrentBusinessStore,
     sessionStore: SessionStore,
-    sessionExpiredSignal: SessionExpiredSignal
+    sessionExpiredSignal: SessionExpiredSignal,
+    resetTokenHolder: ResetTokenHolder
 ) {
     val nav = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -48,23 +51,12 @@ fun BrandoraRoot(
     }
 
     // Session expiry (refresh rejected or its response lost) lands on Login from anywhere,
-    // with one snackbar. The stack is fully cleared first, because popUpTo(start) silently
-    // no-ops when the start destination isn't on the back stack (a real case: the process
-    // started at Login, the user logged in, so Login itself is long gone). popBackStack()
-    // only removes the top entry, so walk down to the bottom entry and let the navigate()'s
-    // popUpTo remove that one too: Login ends up as the ONLY entry, and system back exits
-    // the app instead of revealing a session-less screen behind it. Navigation runs before
-    // the (suspending) snackbar so the redirect is immediate; the host survives it.
+    // with one snackbar. clearTo() clears the whole stack first (see its KDoc), so Login
+    // ends up as the ONLY entry. Navigation runs before the (suspending) snackbar so the
+    // redirect is immediate; the host survives it.
     LaunchedEffect(Unit) {
         sessionExpiredSignal.events.collect {
-            while (nav.previousBackStackEntry != null) {
-                if (!nav.popBackStack()) break
-            }
-            val bottomId = nav.currentBackStackEntry?.destination?.id
-            nav.navigate(Routes.LOGIN) {
-                if (bottomId != null) popUpTo(bottomId) { inclusive = true }
-                launchSingleTop = true
-            }
+            nav.clearTo(Routes.LOGIN)
             snackbarHostState.showSnackbar(sessionExpiredMessage)
         }
     }
@@ -88,6 +80,7 @@ fun BrandoraRoot(
                 nav = nav,
                 startDestination = start,
                 snackbarHostState = snackbarHostState,
+                resetTokenHolder = resetTokenHolder,
                 modifier = Modifier.padding(innerPadding)
             )
         }

@@ -12,7 +12,7 @@ sealed interface ApiResult<out T> {
 enum class ApiErrorType {
     NETWORK, TIMEOUT, UNAUTHORIZED, BAD_REQUEST, NOT_FOUND,
     CONFLICT, FILE_TOO_LARGE, INVALID_FILE_TYPE, AUTH_RATE_LIMITED,
-    AUTH_RATE_LIMIT_UNAVAILABLE, SERVER, UNKNOWN
+    AUTH_RATE_LIMIT_UNAVAILABLE, AUTH_EMAIL_UNAVAILABLE, SERVER, UNKNOWN
 }
 
 inline fun <T, R> ApiResult<T>.map(transform: (T) -> R): ApiResult<R> = when (this) {

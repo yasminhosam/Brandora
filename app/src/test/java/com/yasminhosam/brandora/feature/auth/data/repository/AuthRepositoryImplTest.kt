@@ -271,6 +271,108 @@ class AuthRepositoryImplTest {
         assertEquals(0, store.clears)
     }
 
+    @Test
+    fun `a successful forgot-password request never touches the session`() = runBlocking {
+        // The 200 body is the backend's generic message: parsed by Retrofit's Unit
+        // converter (closed, never read) and never shown to the user.
+        val backend = FakeBackend().apply {
+            respond = { request ->
+                response(request, 200, """{"statusCode":200,"message":"If an account exists..."}""")
+            }
+        }
+        val store = FakeSessionStore(OLD)
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.forgotPassword("a@b.c")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals(0, store.saves)
+        assertEquals(0, store.clears)
+        assertEquals(OLD.accessToken, store.session.value?.accessToken)
+    }
+
+    @Test
+    fun `a successful reset (204) revokes the local session`() = runBlocking {
+        val backend = FakeBackend().apply {
+            respond = { request -> response(request, 204) } // No Content: empty body
+        }
+        val store = FakeSessionStore(OLD)
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.resetPassword("tok-1", "Secret1Abcdefg")
+
+        assertTrue(result is ApiResult.Success)
+        assertEquals(1, store.clears)
+        assertNull(store.session.value)
+    }
+
+    @Test
+    fun `a rejected reset keeps the session (only a 204 revokes it)`() = runBlocking {
+        val backend = FakeBackend().apply {
+            respond = { request ->
+                response(request, 400, errorBody(400, AuthErrorCodes.AUTH_RESET_INVALID))
+            }
+        }
+        val store = FakeSessionStore(OLD)
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.resetPassword("expired", "Secret1Abcdefg")
+
+        assertTrue(result is ApiResult.Error)
+        assertEquals(AuthErrorCodes.AUTH_RESET_INVALID, (result as ApiResult.Error).errorCode)
+        assertEquals(0, store.clears)
+        assertEquals(OLD.accessToken, store.session.value?.accessToken)
+    }
+
+    @Test
+    fun `a rate-limited reset keeps the session and carries Retry-After`() = runBlocking {
+        val backend = FakeBackend().apply {
+            respond = { request ->
+                response(request, 429, errorBody(429, AuthErrorCodes.AUTH_RATE_LIMITED), retryAfter = "30")
+            }
+        }
+        val store = FakeSessionStore(OLD)
+        val (repository, _, _) = repository(backend, store)
+
+        val result = repository.resetPassword("tok-1", "Secret1Abcdefg")
+
+        val error = result as ApiResult.Error
+        assertEquals(com.yasminhosam.brandora.core.network.ApiErrorType.AUTH_RATE_LIMITED, error.type)
+        assertEquals(30L, error.retryAfterSeconds)
+        assertEquals(0, store.clears)
+        assertEquals(OLD.accessToken, store.session.value?.accessToken)
+    }
+
+    @Test
+    fun `the forgot and reset requests carry exactly the contract fields`() = runBlocking {
+        val bodies = mutableMapOf<String, String>()
+        val backend = FakeBackend().apply {
+            respond = { request ->
+                request.body?.let { body ->
+                    val buffer = okio.Buffer()
+                    body.writeTo(buffer)
+                    bodies[request.url.encodedPath] = buffer.readUtf8()
+                }
+                if (request.url.encodedPath.endsWith("forgot-password")) {
+                    response(request, 200, """{"statusCode":200}""")
+                } else {
+                    response(request, 204)
+                }
+            }
+        }
+        val store = FakeSessionStore()
+        val (repository, _, _) = repository(backend, store)
+
+        repository.forgotPassword("a@b.c")
+        repository.resetPassword("tok-1", "Secret1Abcdefg")
+
+        assertEquals("""{"email":"a@b.c"}""", bodies["/auth/forgot-password"])
+        assertEquals(
+            """{"token":"tok-1","newPassword":"Secret1Abcdefg"}""",
+            bodies["/auth/reset-password"]
+        )
+    }
+
     private companion object {
         val OLD = AuthSession(
             user = AuthUser(id = "u1"),

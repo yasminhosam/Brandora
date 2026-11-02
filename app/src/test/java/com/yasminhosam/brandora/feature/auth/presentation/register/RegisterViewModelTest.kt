@@ -65,6 +65,12 @@ class RegisterViewModelTest {
             error("not under test")
 
         override suspend fun refresh(): ApiResult<AuthSession> = error("not under test")
+
+        override suspend fun forgotPassword(email: String): ApiResult<Unit> =
+            error("not under test")
+
+        override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
+            error("not under test")
     }
 
     private class FakeBusinessStore(id: String?) : CurrentBusinessStore {

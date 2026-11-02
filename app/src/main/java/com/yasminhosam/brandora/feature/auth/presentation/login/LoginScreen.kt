@@ -52,6 +52,7 @@ fun LoginScreen(
     state: LoginUiState,
     onEvent: (LoginEvent) -> Unit,
     onRegisterClick: () -> Unit = {},
+    onForgotPasswordClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -148,7 +149,15 @@ fun LoginScreen(
                 color = scheme.error
             )
         }
-        Spacer(Modifier.height(24.dp))
+
+        // Recovery sits directly under the password field, before the submit button.
+        TextButton(
+            onClick = onForgotPasswordClick,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text(text = stringResource(R.string.login_link_forgot))
+        }
+        Spacer(Modifier.height(4.dp))
 
         state.submitError?.let { error ->
             Text(

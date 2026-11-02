@@ -163,6 +163,22 @@
     <string name="auth_password_complexity">Add an uppercase letter, a lowercase letter, and a digit.</string>
     <string name="auth_rate_limited_retry">Too many attempts. Try again in %1$d s.</string>
     <string name="auth_rate_limit_unavailable_retry">The service is busy. Try again in %1$d s.</string>
+    <string name="error_auth_email_unavailable">Password reset emails are temporarily unavailable. Please try again later.</string>
+
+    <!-- Auth: forgot + reset password -->
+    <string name="login_link_forgot">Forgot password?</string>
+    <string name="forgot_title">Reset your password</string>
+    <string name="forgot_subtitle">Enter your email and we\'ll send you a link to reset it.</string>
+    <string name="forgot_action">Send reset link</string>
+    <string name="forgot_in_progress">Sending…</string>
+    <string name="forgot_success">If an account uses this email, we\'ve sent a link to reset its password. The link is valid for 15 minutes.</string>
+    <string name="forgot_link_login">Back to login</string>
+    <string name="reset_title">Choose a new password</string>
+    <string name="reset_subtitle">Set a new password for your account.</string>
+    <string name="reset_action">Reset password</string>
+    <string name="reset_in_progress">Resetting…</string>
+    <string name="reset_invalid_link">This reset link is invalid or has expired. Request a new one.</string>
+    <string name="reset_done">Password reset. Log in with your new password.</string>
 
     <!-- Temp home screen -->
     <string name="home_title">Home</string>

@@ -21,6 +21,8 @@ import javax.inject.Inject
  *                             without answering, and a single-use token must never be
  *                             retried - clear the session instead of risking revocation.
  * - refresh rate-limited   -> tokens may still be valid; fail WITHOUT clearing.
+ * - reset password success  -> the 204 revokes every session server-side, so the local one
+ *                             is dropped too; a FAILED reset never touches the session.
  */
 class AuthRepositoryImpl @Inject constructor(
     private val remote: AuthRemoteDataSource,
@@ -59,6 +61,17 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun forgotPassword(email: String): ApiResult<Unit> =
+        remote.forgotPassword(email)
+
+    override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
+        remote.resetPassword(token, newPassword).also { result ->
+            // Only a 204 revokes the sessions: an invalid token or a rate limit must not
+            // log anyone out (and no expired-signal here - the Reset screen owns its
+            // navigation, with its own message).
+            if (result is ApiResult.Success) sessionStore.clear()
+        }
 
     private suspend fun expire() {
         sessionStore.clear()
