@@ -141,6 +141,8 @@
     <string name="login_subtitle">سجّل الدخول لإدارة كتالوجك.</string>
     <string name="login_email_label">البريد الإلكتروني</string>
     <string name="login_password_label">كلمة المرور</string>
+    <string name="password_show">إظهار كلمة المرور</string>
+    <string name="password_hide">إخفاء كلمة المرور</string>
     <string name="login_action">تسجيل الدخول</string>
     <string name="login_in_progress">جارٍ تسجيل الدخول…</string>
     <string name="login_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة.</string>
@@ -152,6 +154,11 @@
     <string name="register_in_progress">جارٍ إنشاء الحساب…</string>
     <string name="register_link_login">لديك حساب بالفعل؟ تسجيل الدخول</string>
     <string name="register_password_requirements">12 حرفًا على الأقل، ويجب أن تتضمن حرفًا كبيرًا وحرفًا صغيرًا ورقمًا.</string>
+    <!-- Auth: live password rule checklist (each line turns green as it is satisfied) -->
+    <string name="register_rule_length">12 حرفًا على الأقل</string>
+    <string name="register_rule_uppercase">حرف كبير</string>
+    <string name="register_rule_lowercase">حرف صغير</string>
+    <string name="register_rule_digit">رقم</string>
     <!-- Auth: local validation + rate-limit cooldowns -->
     <string name="auth_field_required">هذا الحقل مطلوب.</string>
     <string name="auth_email_invalid">أدخل بريدًا إلكترونيًا صالحًا.</string>

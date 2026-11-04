@@ -8,14 +8,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -26,18 +32,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.autofill.contentType
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.ui.cooldownMessageRes
 import com.yasminhosam.brandora.core.ui.messageRes
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
+import com.yasminhosam.brandora.feature.auth.presentation.AuthBrandHeader
 import com.yasminhosam.brandora.feature.auth.presentation.fieldMessageRes
 
 /**
@@ -60,17 +75,26 @@ fun LoginScreen(
     // held counts as a blur, so untouched fields show no required note.
     var emailHeldFocus by remember { mutableStateOf(false) }
     var passwordHeldFocus by remember { mutableStateOf(false) }
+    // Tracked here (not in the state) so toggling visibility never reaches the ViewModel.
+    var passwordVisible by remember { mutableStateOf(false) }
+    // Lets the keyboard's Next key jump from email to password.
+    val passwordFocusRequester = remember { FocusRequester() }
 
     Column(
-        // Edge-to-edge: keep content clear of the status and gesture bars.
+        // Edge-to-edge: keep content clear of the status, gesture and keyboard areas;
+        // verticalScroll keeps the submit button reachable at large font sizes.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
+            .imePadding()
             .padding(horizontal = 24.dp)
             .padding(top = 16.dp, bottom = 12.dp)
+            .verticalScroll(rememberScrollState())
     ) {
+        AuthBrandHeader()
+        Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(R.string.login_title),
             style = MaterialTheme.typography.headlineSmall,
@@ -91,6 +115,7 @@ fun LoginScreen(
             label = { Text(text = stringResource(R.string.login_email_label)) },
             modifier = Modifier
                 .fillMaxWidth()
+                .contentType(ContentType.EmailAddress)
                 .onFocusChanged { focus ->
                     if (focus.isFocused) {
                         emailHeldFocus = true
@@ -101,17 +126,25 @@ fun LoginScreen(
                 },
             singleLine = true,
             isError = state.invalidCredentials || state.emailError != null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(onNext = { passwordFocusRequester.requestFocus() }),
+            // Always occupies one line (nbsp when there is no message) so the field's
+            // footprint never changes when an error appears or disappears, and the
+            // message sits in the slot TalkBack announces with isError.
+            supportingText = {
+                Text(
+                    text = state.emailError?.let { stringResource(it.fieldMessageRes()) }
+                        ?: "\u00A0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.error
+                )
+            }
         )
-        state.emailError?.let { error ->
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(error.fieldMessageRes()),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.error
-            )
-        }
-        Spacer(Modifier.height(16.dp))
 
         OutlinedTextField(
             value = state.password,
@@ -119,6 +152,8 @@ fun LoginScreen(
             label = { Text(text = stringResource(R.string.login_password_label)) },
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(passwordFocusRequester)
+                .contentType(ContentType.Password)
                 .onFocusChanged { focus ->
                     if (focus.isFocused) {
                         passwordHeldFocus = true
@@ -129,17 +164,39 @@ fun LoginScreen(
                 },
             singleLine = true,
             isError = state.invalidCredentials || state.passwordError != null,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            visualTransformation =
+                if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        painter = painterResource(
+                            if (passwordVisible) {
+                                R.drawable.ic_visibility_off
+                            } else {
+                                R.drawable.ic_visibility
+                            }
+                        ),
+                        contentDescription = stringResource(
+                            if (passwordVisible) R.string.password_hide else R.string.password_show
+                        ),
+                        tint = scheme.onSurfaceVariant
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Go
+            ),
+            keyboardActions = KeyboardActions(onGo = { onEvent(LoginEvent.SubmitClicked) }),
+            supportingText = {
+                Text(
+                    text = state.passwordError?.let { stringResource(it.fieldMessageRes()) }
+                        ?: "\u00A0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.error
+                )
+            }
         )
-        state.passwordError?.let { error ->
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(error.fieldMessageRes()),
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.error
-            )
-        }
 
         if (state.invalidCredentials) {
             Spacer(Modifier.height(4.dp))

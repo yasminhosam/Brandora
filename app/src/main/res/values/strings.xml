@@ -142,6 +142,8 @@
     <string name="login_subtitle">Log in to manage your catalog.</string>
     <string name="login_email_label">Email</string>
     <string name="login_password_label">Password</string>
+    <string name="password_show">Show password</string>
+    <string name="password_hide">Hide password</string>
     <string name="login_action">Log in</string>
     <string name="login_in_progress">Logging in…</string>
     <string name="login_invalid_credentials">Incorrect email or password.</string>
@@ -153,6 +155,11 @@
     <string name="register_in_progress">Creating account…</string>
     <string name="register_link_login">Already have an account? Log in</string>
     <string name="register_password_requirements">At least 12 characters with an uppercase letter, a lowercase letter, and a digit.</string>
+    <!-- Auth: live password rule checklist (each line turns green as it is satisfied) -->
+    <string name="register_rule_length">At least 12 characters</string>
+    <string name="register_rule_uppercase">An uppercase letter</string>
+    <string name="register_rule_lowercase">A lowercase letter</string>
+    <string name="register_rule_digit">A digit</string>
     <!-- Auth: local validation + rate-limit cooldowns -->
     <string name="auth_field_required">This field is required.</string>
     <string name="auth_email_invalid">Enter a valid email address.</string>
