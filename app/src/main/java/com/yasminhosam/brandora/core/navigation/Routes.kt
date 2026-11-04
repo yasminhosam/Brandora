@@ -1,6 +1,14 @@
 package com.yasminhosam.brandora.core.navigation
 
 object Routes {
+    // Auth
+    const val LOGIN = "login"
+    const val REGISTER = "register"
+    const val FORGOT_PASSWORD = "forgot_password"
+    // Static route on purpose: the reset token is NEVER a route argument - it stays in
+    // memory, handed from the app-link intent to the screen by ResetTokenHolder.
+    const val RESET_PASSWORD = "reset_password"
+
     // Onboarding
     const val BUSINESS_CREATE = "business/create"
 

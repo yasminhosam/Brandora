@@ -30,11 +30,29 @@ class ApiErrorHandler @Inject constructor(
                 val apiError= parseErrorBody(
                     error.response()?.errorBody()?.string()
                 )
+                // The backend's stable code outranks the status: a 503 carrying
+                // AUTH_RATE_LIMIT_UNAVAILABLE gets the cooldown contract, AUTH_EMAIL_UNAVAILABLE
+                // gets its own typed message (no Retry-After: it is not a cooldown), while any
+                // other 503 stays the generic server error.
+                val type = when (apiError?.code) {
+                    AuthErrorCodes.AUTH_RATE_LIMIT_UNAVAILABLE ->
+                        ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
+                    AuthErrorCodes.AUTH_EMAIL_UNAVAILABLE ->
+                        ApiErrorType.AUTH_EMAIL_UNAVAILABLE
+                    else -> typeFor(statusCode)
+                }
                 ApiResult.Error(
-                    type = typeFor(statusCode),
+                    type = type,
                     code = statusCode,
                     message = apiError?.readableMessage(),
-                    errorCode = apiError?.code)
+                    errorCode = apiError?.code,
+                    // Retry-After is only actionable for the rate-limit contract: the 429
+                    // and the 503 with its stable code. Any other status sending the header
+                    // must not make the field look actionable.
+                    retryAfterSeconds = if (
+                        statusCode == 429 || type == ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
+                    ) retryAfterSeconds(error) else null
+                )
 
             }
 
@@ -64,7 +82,15 @@ class ApiErrorHandler @Inject constructor(
         404 -> ApiErrorType.NOT_FOUND
         409 -> ApiErrorType.CONFLICT
         413 -> ApiErrorType.FILE_TOO_LARGE
+        429 -> ApiErrorType.AUTH_RATE_LIMITED
         in 500..599 -> ApiErrorType.SERVER
         else -> ApiErrorType.UNKNOWN
     }
+
+    /**
+     * The backend sends Retry-After as numeric seconds. An HTTP-date or an unparseable
+     * value is treated as absent - the caller shows a generic rate-limit message.
+     */
+    private fun retryAfterSeconds(error: HttpException): Long? =
+        error.response()?.headers()?.get("Retry-After")?.trim()?.toLongOrNull()
 }

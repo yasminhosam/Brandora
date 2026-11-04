@@ -27,6 +27,8 @@
     <string name="import_add_product_title">إضافة منتج</string>
     <string name="import_add_product_placeholder">ستكون شاشة إضافة المنتج هنا.</string>
     <string name="error_invalid_file_type">نوع الملف غير مدعوم. يرجى اختيار ملف ‎.xlsx‎.</string>
+    <string name="error_auth_rate_limited">محاولات كثيرة خلال وقت قصير. انتظر قليلاً ثم حاول مرة أخرى.</string>
+    <string name="error_auth_rate_limit_unavailable">الخدمة غير متاحة مؤقتًا. يُرجى المحاولة بعد قليل.</string>
 
     <!-- Catalog import: column mapping screen -->
     <string name="mapping_title">طابق الأعمدة</string>
@@ -133,6 +135,56 @@
     <string name="business_optional">اختياري</string>
     <string name="business_create">إنشاء النشاط التجاري</string>
     <string name="business_creating">جارٍ الإنشاء…</string>
+
+    <!-- Auth: login + register -->
+    <string name="login_title">مرحباً بعودتك</string>
+    <string name="login_subtitle">سجّل الدخول لإدارة كتالوجك.</string>
+    <string name="login_email_label">البريد الإلكتروني</string>
+    <string name="login_password_label">كلمة المرور</string>
+    <string name="password_show">إظهار كلمة المرور</string>
+    <string name="password_hide">إخفاء كلمة المرور</string>
+    <string name="login_action">تسجيل الدخول</string>
+    <string name="login_in_progress">جارٍ تسجيل الدخول…</string>
+    <string name="login_invalid_credentials">البريد الإلكتروني أو كلمة المرور غير صحيحة.</string>
+    <string name="session_expired">انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.</string>
+    <string name="login_link_register">ليس لديك حساب؟ سجّل الآن</string>
+    <string name="register_title">أنشئ حسابك</string>
+    <string name="register_subtitle">سجّل الآن لتبدأ في إدارة كتالوجك.</string>
+    <string name="register_action">إنشاء الحساب</string>
+    <string name="register_in_progress">جارٍ إنشاء الحساب…</string>
+    <string name="register_link_login">لديك حساب بالفعل؟ تسجيل الدخول</string>
+    <string name="register_password_requirements">12 حرفًا على الأقل، ويجب أن تتضمن حرفًا كبيرًا وحرفًا صغيرًا ورقمًا.</string>
+    <!-- Auth: live password rule checklist (each line turns green as it is satisfied) -->
+    <string name="register_rule_length">12 حرفًا على الأقل</string>
+    <string name="register_rule_uppercase">حرف كبير</string>
+    <string name="register_rule_lowercase">حرف صغير</string>
+    <string name="register_rule_digit">رقم</string>
+    <!-- Auth: local validation + rate-limit cooldowns -->
+    <string name="auth_field_required">هذا الحقل مطلوب.</string>
+    <string name="auth_email_invalid">أدخل بريدًا إلكترونيًا صالحًا.</string>
+    <string name="auth_email_too_long">يجب ألا يتجاوز البريد الإلكتروني 254 حرفًا.</string>
+    <string name="auth_email_unavailable">هذا البريد الإلكتروني مسجَّل بالفعل.</string>
+    <string name="auth_password_too_short">يجب ألا تقل كلمة المرور عن 12 حرفًا.</string>
+    <string name="auth_password_too_long">يجب ألا تتجاوز كلمة المرور 128 حرفًا.</string>
+    <string name="auth_password_complexity">أضف حرفًا كبيرًا وحرفًا صغيرًا ورقمًا.</string>
+    <string name="auth_rate_limited_retry">محاولات كثيرة خلال وقت قصير. حاول مرة أخرى بعد %1$d ثانية.</string>
+    <string name="auth_rate_limit_unavailable_retry">الخدمة مشغولة. حاول مرة أخرى بعد %1$d ثانية.</string>
+    <string name="error_auth_email_unavailable">رسائل إعادة تعيين كلمة المرور غير متاحة مؤقتًا. يُرجى المحاولة بعد قليل.</string>
+
+    <!-- Auth: forgot + reset password -->
+    <string name="login_link_forgot">هل نسيت كلمة المرور؟</string>
+    <string name="forgot_title">إعادة تعيين كلمة المرور</string>
+    <string name="forgot_subtitle">أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة التعيين.</string>
+    <string name="forgot_action">إرسال رابط الإعادة</string>
+    <string name="forgot_in_progress">جارٍ الإرسال…</string>
+    <string name="forgot_success">إذا كان هناك حساب يستخدم هذا البريد الإلكتروني، فقد أرسلنا إليه رابطًا لإعادة تعيين كلمة المرور. الرابط صالح لمدة 15 دقيقة.</string>
+    <string name="forgot_link_login">العودة إلى تسجيل الدخول</string>
+    <string name="reset_title">اختر كلمة مرور جديدة</string>
+    <string name="reset_subtitle">عيّن كلمة مرور جديدة لحسابك.</string>
+    <string name="reset_action">إعادة تعيين كلمة المرور</string>
+    <string name="reset_in_progress">جارٍ إعادة التعيين…</string>
+    <string name="reset_invalid_link">رابط الإعادة هذا غير صالح أو منتهي الصلاحية. اطلب رابطًا جديدًا.</string>
+    <string name="reset_done">تمت إعادة تعيين كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.</string>
 
     <!-- Temp home screen -->
     <string name="home_title">الرئيسية</string>

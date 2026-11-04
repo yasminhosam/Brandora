@@ -15,25 +15,50 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.yasminhosam.brandora.app.AppNavHost
 import com.yasminhosam.brandora.core.navigation.Routes
+import com.yasminhosam.brandora.core.navigation.clearTo
+import com.yasminhosam.brandora.core.network.SessionExpiredSignal
+import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
+import com.yasminhosam.brandora.feature.auth.presentation.reset.ResetTokenHolder
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
 import kotlinx.coroutines.flow.first
 
 @Composable
-fun BrandoraRoot(currentBusinessStore: CurrentBusinessStore) {
+fun BrandoraRoot(
+    currentBusinessStore: CurrentBusinessStore,
+    sessionStore: SessionStore,
+    sessionExpiredSignal: SessionExpiredSignal,
+    resetTokenHolder: ResetTokenHolder
+) {
     val nav = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val backStackEntry by nav.currentBackStackEntryAsState()
+    val sessionExpiredMessage = stringResource(R.string.session_expired)
 
-    // Wait for the first real DataStore value before choosing the start screen.
+    // Wait for the first real values before choosing the start screen: no session means
+    // Login; with a session the existing business gate decides Home vs Business Create.
     var startDestination by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
-        startDestination =
-            if (currentBusinessStore.businessId.first() == null) Routes.BUSINESS_CREATE
-            else Routes.HOME
+        startDestination = when {
+            sessionStore.session.first() == null -> Routes.LOGIN
+            currentBusinessStore.businessId.first() == null -> Routes.BUSINESS_CREATE
+            else -> Routes.HOME
+        }
+    }
+
+    // Session expiry (refresh rejected or its response lost) lands on Login from anywhere,
+    // with one snackbar. clearTo() clears the whole stack first (see its KDoc), so Login
+    // ends up as the ONLY entry. Navigation runs before the (suspending) snackbar so the
+    // redirect is immediate; the host survives it.
+    LaunchedEffect(Unit) {
+        sessionExpiredSignal.events.collect {
+            nav.clearTo(Routes.LOGIN)
+            snackbarHostState.showSnackbar(sessionExpiredMessage)
+        }
     }
 
     Scaffold(
@@ -55,6 +80,7 @@ fun BrandoraRoot(currentBusinessStore: CurrentBusinessStore) {
                 nav = nav,
                 startDestination = start,
                 snackbarHostState = snackbarHostState,
+                resetTokenHolder = resetTokenHolder,
                 modifier = Modifier.padding(innerPadding)
             )
         }
