@@ -1,12 +1,15 @@
 package com.yasminhosam.brandora.core.network
 
 import com.yasminhosam.brandora.BuildConfig
+import com.yasminhosam.brandora.feature.inbox.domain.model.Customer
 
 object ApiConfig {
     // Comes from brandora.baseUrl in local.properties (always ends with '/').
-    val BASE_URL: String get() = BuildConfig.BASE_URL
+    val BASE_URL: String
+        get() = BuildConfig.BASE_URL
 
-    const val MAX_UPLOAD_BYTES = 10L * 1024 * 1024 // Excel limit: 10 MiB (backend returns 413 above it)
+    const val MAX_UPLOAD_BYTES =
+        10L * 1024 * 1024 // Excel limit: 10 MiB (backend returns 413 above it)
     const val DEFAULT_LIMIT = 20
     const val DEFAULT_OFFSET = 0
 
@@ -15,26 +18,35 @@ object ApiConfig {
 }
 
 object ApiEndpoints {
-    const val BUSINESSES = "businesses"                                          // POST (create)
-    const val CATALOG_ITEMS = "catalog-items"                                    // POST (create), GET (list)
+    const val BUSINESSES = "businesses" // POST (create)
 
-    // Auth: these routes are public (no Bearer header). Only login and refresh are
-    // implemented so far; the rest are declared so the interceptor can skip them later.
-    const val AUTH_REGISTER = "auth/register"                                    // POST
-    const val AUTH_LOGIN = "auth/login"                                          // POST
-    const val AUTH_REFRESH = "auth/refresh"                                      // POST (single-use refresh token)
-    const val AUTH_LOGOUT = "auth/logout"                                        // POST
-    const val AUTH_FORGOT_PASSWORD = "auth/forgot-password"                      // POST
-    const val AUTH_RESET_PASSWORD = "auth/reset-password"                        // POST
+    // Auth routes are public and use the dedicated auth client. Recovery is OTP-only.
+    const val AUTH_REGISTER = "auth/register" // POST
+    const val AUTH_LOGIN = "auth/login" // POST
+    const val AUTH_REFRESH = "auth/refresh" // POST (single-use refresh token)
+    const val AUTH_LOGOUT = "auth/logout" // POST
+    const val AUTH_FORGOT_PASSWORD = "auth/forgot-password" // POST
+    const val AUTH_RESET_PASSWORD = "auth/reset-password" // POST
 
     // Excel import flow: analyze -> mapping -> validate -> preview -> execute
-    const val IMPORT_ANALYZE = "businesses/{businessId}/imports/excel/analyze"   // POST multipart
-    const val IMPORT_MAPPING = "imports/{importId}/mapping"                      // GET suggestions, PATCH confirm
-    const val IMPORT_VALIDATE = "imports/{importId}/validate"                    // POST
-    const val IMPORT_VALIDATE_RESULTS = "imports/{importId}/validation-results"  // GET
-    const val IMPORT_PREVIEW = "imports/{importId}/preview"                      // GET
-    const val IMPORT_EXECUTE = "imports/{importId}/execute"                      // POST
-    const val IMPORT_STATUS = "imports/{importId}"                               // GET (job status)
+    const val IMPORT_ANALYZE = "businesses/{businessId}/imports/excel/analyze" // POST multipart
+    const val IMPORT_MAPPING = "imports/{importId}/mapping" // GET suggestions, PATCH confirm
+    const val IMPORT_VALIDATE = "imports/{importId}/validate" // POST
+    const val IMPORT_VALIDATE_RESULTS = "imports/{importId}/validation-results" // GET
+    const val IMPORT_PREVIEW = "imports/{importId}/preview" // GET
+    const val IMPORT_EXECUTE = "imports/{importId}/execute" // POST
+    const val IMPORT_STATUS = "imports/{importId}" // GET (job status)
+
+    //Conversation
+    const val CONVERSATION_LIST = "businesses/{businessId}/conversations" // GET
+    const val CONVERSATION = "businesses/{businessId}/conversations/{conversationId}" //GET
+    const val CONVERSATION_MESSAGES ="businesses/{businessId}/conversations/{conversationId}/messages" //GET
+    const val CUSTOMER_LIST = "businesses/{businessId}/customers"
+    const val CUSTOMER= "businesses/{businessId}/customers/{customerId}"
+    const val MESSAGES= "businesses/{businessId}/conversations/{conversationId}/messages"
+
+    // Working hours: GET returns [] until the first PUT; PUT replaces all seven days at once
+    const val WORKING_HOURS = "businesses/{businessId}/working-hours" // GET, PUT
 }
 
 // Names used inside @Path / @Query / @Part annotations
@@ -46,8 +58,12 @@ object ApiParams {
     const val QUERY_LIMIT = "limit"
     const val QUERY_OFFSET = "offset"
 
-    const val PART_FILE = "file"              // required .xlsx
-    const val PART_SHEET_NAME = "sheetName"   // optional, falls back to the first sheet
+    const val PART_FILE = "file" // required .xlsx
+    const val PART_SHEET_NAME = "sheetName" // optional, falls back to the first sheet
+
+    const val CONVERSATION_ID="conversationId"
+    const val CUSTOMER_ID="customerId"
+    const val QUERY_STATUS = "status"
 }
 
 // Values the backend sends or expects. Keep exactly as written.
@@ -74,7 +90,9 @@ object MappingTypeValues {
 
 // Allowed targets when type == STANDARD
 object StandardTargets {
-    const val NAME = "name"                    // required before confirming the mapping
+    const val SKU = "sku"
+    const val UNIT_PRICE = "unitPrice"
+    const val NAME = "name" // required before confirming the mapping
     const val EXTERNAL_KEY = "externalKey"
     const val DESCRIPTION = "description"
     const val CATEGORY = "category"
@@ -87,6 +105,50 @@ object ImportRowActions {
     const val UPDATE = "UPDATE"
 }
 
+object ConversationStatusValues{
+    const val OPEN ="OPEN"
+    const val CLOSED="CLOSED"
+}
+
+/** Values of `conversation.handoffReason` (why the AI stopped answering). */
+object HandoffReasonValues {
+    const val AI_REVIEW_REQUIRED = "AI_REVIEW_REQUIRED"
+    const val AI_UNAVAILABLE = "AI_UNAVAILABLE"
+    const val MESSAGE_TOO_LONG = "MESSAGE_TOO_LONG"
+    /** The owner switched the AI off or replied herself. */
+    const val OWNER_TOOK_OVER = "OWNER_TOOK_OVER"
+}
+
+// Stable conversation error codes from conversations-api.md.
+object ConversationErrorCodes {
+    /** 409 on POST .../messages: WhatsApp allows free-form replies only within 24 hours. */
+    const val WHATSAPP_WINDOW_CLOSED = "WHATSAPP_WINDOW_CLOSED"
+    const val CONVERSATION_NOT_FOUND = "CONVERSATION_NOT_FOUND"
+    const val CUSTOMER_NOT_FOUND = "CUSTOMER_NOT_FOUND"
+}
+
+object MessageTypeValues{
+    const val TEXT="TEXT"
+    const val IMAGE="IMAGE"
+    const val AUDIO="AUDIO"
+    const val VIDEO="VIDEO"
+    const val DOCUMENT="DOCUMENT"
+    const val LOCATION ="LOCATION"
+    const val OTHER="OTHER"
+}
+object MessageStatusValues{
+    const val RECEIVED="RECEIVED"
+    const val PENDING="PENDING"
+    const val SENT="SENT"
+    const val DELIVERED="DELIVERED"
+    const val READ="READ"
+    const val FAILED="FAILED"
+}
+object SenderTypeValues{
+    const val AI="AI"
+    const val OWNER="OWNER"
+    const val CUSTOMER="CUSTOMER"
+}
 // Stable backend identifiers for client-side localization. Never show or parse "message".
 object AuthErrorCodes {
     // 400 on POST /auth/register (and /auth/login): the backend rejected the field values.
@@ -103,7 +165,7 @@ object AuthErrorCodes {
     const val AUTH_RATE_LIMIT_UNAVAILABLE = "AUTH_RATE_LIMIT_UNAVAILABLE"
     // 503 on POST /auth/forgot-password: the backend has no mail provider configured.
     const val AUTH_EMAIL_UNAVAILABLE = "AUTH_EMAIL_UNAVAILABLE"
-    // 400 on POST /auth/reset-password: the token is expired/used/superseded/invalid.
+    // 400 on POST /auth/reset-password: the OTP is expired/used/superseded/invalid.
     const val AUTH_RESET_INVALID = "AUTH_RESET_INVALID"
 }
 
