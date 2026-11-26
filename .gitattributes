@@ -1,0 +1,31 @@
+# EOL policy: the repository stores LF for all text files; working-tree conversion is
+# left to core.autocrlf (Windows) or none (CI). Normalizing on `git add` keeps ZIP-imported
+# or externally edited files (mixed CRLF/LF) from ever committing CRLF blobs.
+* text=auto
+
+# Explicit text types
+*.kt text
+*.java text
+*.xml text
+*.kts text
+*.json text
+*.md text
+*.toml text
+*.properties text
+*.pro text
+*.gradle text
+
+# Scripts: keep CRLF where cmd.exe needs it, LF where shells need it (checkout-time only;
+# both normalize to LF in the index).
+*.bat text
+gradlew text
+
+# Binary assets: never normalize
+*.png binary
+*.webp binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.keystore binary
