@@ -21,16 +21,27 @@ class ResultViewModel @Inject constructor(
 
     private val importId: String = savedStateHandle.get<String>(ApiParams.PATH_IMPORT_ID).orEmpty()
 
+    /** Done pops the whole flow; it must fire exactly once, even on a double-tap. */
+    private var doneSent = false
+
     init { runImport() }
 
     override fun onEvent(event: ResultEvent) {
         when (event) {
-            ResultEvent.RetryClicked -> runImport()
-            ResultEvent.CheckStatusClicked -> runImport()
-            ResultEvent.DoneClicked -> if (uiState.value.isCompleted || uiState.value.isPartial) {
-                sendEffect(ResultEffect.NavigateToHome)
-            } else {
-                sendEffect(ResultEffect.NavigateToUpload)
+            // isLoading already means "execute in flight": runImport() flips it synchronously,
+            // so a double-tapped Retry/CheckStatus can never stack two concurrent executes
+            // (the loser response would overwrite the winner's state).
+            ResultEvent.RetryClicked, ResultEvent.CheckStatusClicked ->
+                if (!uiState.value.isLoading) runImport()
+
+            ResultEvent.DoneClicked -> {
+                if (doneSent) return
+                doneSent = true
+                if (uiState.value.isCompleted || uiState.value.isPartial) {
+                    sendEffect(ResultEffect.NavigateToHome)
+                } else {
+                    sendEffect(ResultEffect.NavigateToUpload)
+                }
             }
         }
     }
@@ -69,7 +80,7 @@ class ResultViewModel @Inject constructor(
                 is ApiResult.Error -> setState {
                     copy(
                         isLoading = false,
-                        errorRes = result.type.messageRes(),
+                        errorRes = result.messageRes(),
                         isJobGone = result.errorCode == ImportErrorCodes.IMPORT_JOB_NOT_FOUND
                     )
                 }

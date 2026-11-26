@@ -1,4 +1,6 @@
 package com.yasminhosam.brandora.feature.catalogimport.data.remote
+
+import com.yasminhosam.brandora.core.network.dto.PaginationDto
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -10,37 +12,40 @@ internal data class PreviewSummaryDto(
     val skippedRows: Int = 0,
     val willInsert: Int = 0,
     val willUpdate: Int = 0,
-    val unchanged: Int = 0
+    val unchanged: Int = 0,
 )
 
 @Serializable
 internal data class PreviewInsertDto(
+    val variantAttributes: Map<String, JsonElement> = emptyMap(),
     val rowNumber: Int,
     val externalKey: String? = null,
-    val data: RowDataDto = RowDataDto()
+    val data: RowDataDto = RowDataDto(),
 )
 
 /** One changed field. Values vary by field (string, number, null or the attributes object). */
 @Serializable
 internal data class FieldChangeDto(
     val from: JsonElement? = null,
-    val to: JsonElement? = null
+    val to: JsonElement? = null,
 )
 
 @Serializable
 internal data class PreviewUpdateDto(
+    val variantAttributes: Map<String, JsonElement> = emptyMap(),
     val rowNumber: Int,
     val externalKey: String? = null,
     val catalogItemId: String? = null,
     // Keys: name, description, category, basePrice, stockQuantity, attributes, ...
-    val changes: Map<String, FieldChangeDto> = emptyMap()
+    val changes: Map<String, FieldChangeDto> = emptyMap(),
 )
 
 @Serializable
 internal data class PreviewUnchangedDto(
+    val variantAttributes: Map<String, JsonElement> = emptyMap(),
     val rowNumber: Int,
     val externalKey: String? = null,
-    val catalogItemId: String? = null
+    val catalogItemId: String? = null,
 )
 
 @Serializable
@@ -52,5 +57,5 @@ internal data class PreviewResponseDto(
     val inserts: List<PreviewInsertDto> = emptyList(),
     val updates: List<PreviewUpdateDto> = emptyList(),
     val unchanged: List<PreviewUnchangedDto> = emptyList(),
-    val invalidRows: List<InvalidRowDto> = emptyList()
+    val invalidRows: List<InvalidRowDto> = emptyList(),
 )

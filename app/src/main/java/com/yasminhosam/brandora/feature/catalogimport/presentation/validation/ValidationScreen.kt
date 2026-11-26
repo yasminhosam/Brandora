@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -25,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -43,6 +46,7 @@ import com.yasminhosam.brandora.core.ui.validationErrorRes
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.RowError
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationRow
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationSummary
+import com.yasminhosam.brandora.feature.catalogimport.presentation.components.ImportStepLabel
 
 @Composable
 fun ValidationScreen(
@@ -59,23 +63,40 @@ fun ValidationScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(scheme.primary, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-                .padding(horizontal = 24.dp, vertical = 20.dp)
+        // Same toolbar shape as Mapping: back, step label, title, subtitle.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier.fillMaxWidth()
+                    .background(
+                        scheme.primary,
+                        RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.validation_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = scheme.onPrimary
-            )
-            Text(
-                text = stringResource(R.string.validation_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onPrimary.copy(alpha = 0.85f)
-            )
+            IconButton(onClick = { onEvent(ValidationEvent.FixClicked) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.mapping_back),
+                    tint = scheme.onPrimary
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+            Column {
+                ImportStepLabel(3)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.validation_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = scheme.onPrimary
+                )
+                Text(
+                    text = stringResource(R.string.validation_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onPrimary.copy(alpha = 0.85f)
+                )
+            }
         }
 
         when {
@@ -248,7 +269,11 @@ private fun RowItem(row: ValidationRow) {
             ) {
                 Icon(
                     imageVector = if (row.isValid) Icons.Default.Check else Icons.Default.Close,
-                    contentDescription = null,
+                    contentDescription =
+                        stringResource(
+                            if (row.isValid) R.string.validation_valid
+                            else R.string.validation_invalid
+                        ),
                     tint = if (row.isValid) scheme.onPrimary else scheme.onError,
                     modifier = Modifier.size(16.dp)
                 )

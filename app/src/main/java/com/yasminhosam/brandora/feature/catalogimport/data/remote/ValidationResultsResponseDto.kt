@@ -1,5 +1,6 @@
 package com.yasminhosam.brandora.feature.catalogimport.data.remote
 
+import com.yasminhosam.brandora.core.network.dto.PaginationDto
 import kotlinx.serialization.Serializable
 
 @Serializable

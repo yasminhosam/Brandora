@@ -29,7 +29,21 @@ import androidx.compose.ui.unit.dp
 import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
 
-const val IMPORT_TOTAL_STEPS = 6
+const val IMPORT_TOTAL_STEPS = 5
+
+/**
+ * "Step X of 5" line for the import headers. Each screen draws its own header, so the label
+ * is a small shared piece rather than a full toolbar.
+ */
+@Composable
+fun ImportStepLabel(step: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(R.string.import_step_label, step, IMPORT_TOTAL_STEPS),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onPrimary,
+        modifier = modifier,
+    )
+}
 
 @Composable
 fun ImportStepHeader(

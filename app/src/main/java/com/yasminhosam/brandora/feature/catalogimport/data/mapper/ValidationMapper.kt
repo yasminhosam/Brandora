@@ -1,8 +1,8 @@
 package com.yasminhosam.brandora.feature.catalogimport.data.mapper
 
+import com.yasminhosam.brandora.core.network.dto.PaginationDto
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.ImportSummaryDto
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.InvalidRowDto
-import com.yasminhosam.brandora.feature.catalogimport.data.remote.PaginationDto
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.ValidateResponseDto
 import com.yasminhosam.brandora.feature.catalogimport.data.remote.ValidationResultsResponseDto
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportStatus

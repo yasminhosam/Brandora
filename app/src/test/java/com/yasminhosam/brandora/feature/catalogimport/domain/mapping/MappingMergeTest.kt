@@ -10,22 +10,23 @@ class MappingMergeTest {
         name: String = "Item Name",
         index: Int = 1,
         type: String = "STANDARD",
-        target: String? = "name"
+        target: String? = "name",
     ) = ColumnSuggestion(name, index, listOf("Shirt"), type, target)
 
     private fun saved(
         name: String = "Item Name",
         index: Int = 1,
         type: String = "STANDARD",
-        target: String? = "name"
+        target: String? = "name",
     ) = SavedMapping(name, index, type, target)
 
     @Test
     fun `suggestions become the initial choice when nothing was saved`() {
-        val columns = initialColumns(
-            listOf(suggestion(), suggestion("Price", 2, "STANDARD", "basePrice")),
-            null
-        )
+        val columns =
+            initialColumns(
+                listOf(suggestion(), suggestion("Price", 2, "STANDARD", "basePrice")),
+                null,
+            )
 
         assertEquals(MappingChoice.Standard(StandardTarget.NAME), columns[0].choice)
         assertEquals(MappingChoice.Standard(StandardTarget.BASE_PRICE), columns[1].choice)
@@ -47,53 +48,58 @@ class MappingMergeTest {
 
     @Test
     fun `a saved mapping wins over the suggestion`() {
-        val columns = initialColumns(
-            listOf(suggestion(target = "name")),
-            listOf(saved(target = "externalKey"))
-        )
+        val columns =
+            initialColumns(
+                listOf(suggestion(target = "name")),
+                listOf(saved(target = "externalKey")),
+            )
 
         assertEquals(MappingChoice.Standard(StandardTarget.EXTERNAL_KEY), columns.single().choice)
     }
 
     @Test
     fun `a saved custom key starts in the field`() {
-        val columns = initialColumns(
-            listOf(suggestion(type = "UNMAPPED", target = null)),
-            listOf(saved(type = "ATTRIBUTE", target = "fabric"))
-        )
+        val columns =
+            initialColumns(
+                listOf(suggestion(type = "UNMAPPED", target = null)),
+                listOf(saved(type = "ATTRIBUTE", target = "fabric")),
+            )
 
         assertEquals(MappingChoice.CustomAttribute("fabric"), columns.single().choice)
     }
 
     @Test
-    fun `a saved variant attribute becomes ignore and is never sent back`() {
-        val columns = initialColumns(
-            listOf(suggestion()),
-            listOf(saved(type = "VARIANT_ATTRIBUTE", target = "size"))
-        )
+    fun `a saved variant attribute retains its exact option name`() {
+        val columns =
+            initialColumns(
+                listOf(suggestion()),
+                listOf(saved(type = "VARIANT_ATTRIBUTE", target = "size")),
+            )
 
-        assertEquals(MappingChoice.Ignore, columns.single().choice)
+        assertEquals(MappingChoice.VariantAttribute("size"), columns.single().choice)
     }
 
     @Test
     fun `a saved entry with an unknown type becomes ignore`() {
-        val columns = initialColumns(
-            listOf(suggestion()),
-            listOf(saved(type = "SOMETHING_NEW", target = null))
-        )
+        val columns =
+            initialColumns(
+                listOf(suggestion()),
+                listOf(saved(type = "SOMETHING_NEW", target = null)),
+            )
 
         assertEquals(MappingChoice.Ignore, columns.single().choice)
     }
 
     @Test
     fun `duplicate headers match their saved entry by index, not by name`() {
-        val columns = initialColumns(
-            listOf(
-                suggestion("Note", 1, "UNMAPPED", null),
-                suggestion("Note", 2, "UNMAPPED", null)
-            ),
-            listOf(saved("Note", 2, "ATTRIBUTE", "note2"))
-        )
+        val columns =
+            initialColumns(
+                listOf(
+                    suggestion("Note", 1, "UNMAPPED", null),
+                    suggestion("Note", 2, "UNMAPPED", null),
+                ),
+                listOf(saved("Note", 2, "ATTRIBUTE", "note2")),
+            )
 
         assertEquals(MappingChoice.Ignore, columns[0].choice)
         assertEquals(MappingChoice.CustomAttribute("note2"), columns[1].choice)
@@ -101,10 +107,11 @@ class MappingMergeTest {
 
     @Test
     fun `a column without a saved entry falls back to its suggestion`() {
-        val columns = initialColumns(
-            listOf(suggestion(), suggestion("Price", 2, "STANDARD", "basePrice")),
-            listOf(saved(index = 1))
-        )
+        val columns =
+            initialColumns(
+                listOf(suggestion(), suggestion("Price", 2, "STANDARD", "basePrice")),
+                listOf(saved(index = 1)),
+            )
 
         assertEquals(MappingChoice.Standard(StandardTarget.NAME), columns[0].choice)
         assertEquals(MappingChoice.Standard(StandardTarget.BASE_PRICE), columns[1].choice)
@@ -112,10 +119,13 @@ class MappingMergeTest {
 
     @Test
     fun `header text, index and samples survive the merge`() {
-        val columns = initialColumns(
-            listOf(ColumnSuggestion("Item Name", 1, listOf("Shirt", "Hat"), "STANDARD", "name")),
-            null
-        )
+        val columns =
+            initialColumns(
+                listOf(
+                    ColumnSuggestion("Item Name", 1, listOf("Shirt", "Hat"), "STANDARD", "name")
+                ),
+                null,
+            )
 
         val column = columns.single()
         assertEquals("Item Name", column.sourceColumn)

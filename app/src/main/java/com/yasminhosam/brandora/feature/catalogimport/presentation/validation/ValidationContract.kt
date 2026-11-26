@@ -8,6 +8,9 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationRow
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationSummary
 
 sealed interface ValidationEvent : UiEvent {
+    /** Re-arms the Continue latch when the user comes back from Preview. */
+    data object ScreenEntered : ValidationEvent
+
     data object RetryClicked : ValidationEvent
     data object LoadMoreClicked : ValidationEvent
     data object ContinueClicked : ValidationEvent
@@ -23,7 +26,9 @@ data class ValidationUiState(
     val nextOffset: Int? = null,
     val isLoadingMore: Boolean = false,
     val loadMoreErrorRes: Int? = null,
-    val errorRes: Int? = null
+    val errorRes: Int? = null,
+    /** Latches Continue/Fix: one navigation per tap, re-armed by [ValidationEvent.ScreenEntered]. */
+    val isNavigating: Boolean = false
 ) : UiState {
 
     val hasMore: Boolean get() = nextOffset != null
@@ -31,7 +36,7 @@ data class ValidationUiState(
     val isReady: Boolean get() = !isLoading && errorRes == null && summary != null
 
     /** Import proceeds with the valid subset; blocked only when nothing is importable. */
-    val canContinue: Boolean get() = isReady && (summary?.validRows ?: 0) > 0
+    val canContinue: Boolean get() = isReady && (summary?.validRows ?: 0) > 0 && !isNavigating
 
     /** True when validation has already reached READY; skip re-triggering startValidation. */
     val isValidationReady: Boolean get() = status == ImportStatus.READY

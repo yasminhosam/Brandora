@@ -26,22 +26,37 @@ data class MappingUiState(
     val validation: MappingValidationResult = MappingValidationResult.Valid,
     val loadFailure: LoadFailure? = null,
     val isConfirming: Boolean = false,
-    val confirmFailureRes: Int? = null
+    val confirmFailureRes: Int? = null,
+    /** Latches the one-shot navigation effects: either of them pops this screen. */
+    val isNavigating: Boolean = false,
 ) : UiState {
 
-    val isNameMapped: Boolean get() =
-        columns.any { (it.choice as? MappingChoice.Standard)?.target == StandardTarget.NAME }
+    val isNameMapped: Boolean
+        get() = columns.any {
+            (it.choice as? MappingChoice.Standard)?.target == StandardTarget.NAME
+        }
 
-    val isSkuMapped: Boolean get() =
-        columns.any { (it.choice as? MappingChoice.Standard)?.target == StandardTarget.EXTERNAL_KEY }
+    val isProductCodeMapped: Boolean
+        get() = columns.any {
+            (it.choice as? MappingChoice.Standard)?.target == StandardTarget.EXTERNAL_KEY
+        }
 
-    val canConfirm: Boolean get() =
-        !isLoading && !isConfirming && loadFailure == null &&
-            columns.isNotEmpty() && validation is MappingValidationResult.Valid
+    val canConfirm: Boolean
+        get() =
+            !isLoading &&
+                !isConfirming &&
+                !isNavigating &&
+                loadFailure == null &&
+                columns.isNotEmpty() &&
+                validation is MappingValidationResult.Valid
 
     fun keyError(index: Int): MappingInvalidReason? {
-        val key = (columns.getOrNull(index)?.choice as? MappingChoice.CustomAttribute)?.key
-            ?: return null
+        val key =
+            when (val choice = columns.getOrNull(index)?.choice) {
+                is MappingChoice.CustomAttribute -> choice.key
+                is MappingChoice.VariantAttribute -> choice.key
+                else -> null
+            } ?: return null
         if (key.isEmpty()) return null
         return (validation as? MappingValidationResult.Invalid)?.reasons?.firstOrNull {
             (it is MappingInvalidReason.EmptyCustomKey && it.index == index) ||

@@ -1,12 +1,17 @@
 package com.yasminhosam.brandora.feature.catalogimport.domain.model
 
-enum class PreviewAction { INSERT, UPDATE, UNCHANGED, INVALID }
+enum class PreviewAction {
+    INSERT,
+    UPDATE,
+    UNCHANGED,
+    INVALID,
+}
 
 /** One changed field on an update. Values are display text; null means blank on that side. */
 data class FieldChange(
     val field: String,
     val from: String?,
-    val to: String?
+    val to: String?,
 )
 
 /** A single row in the preview window, tagged with the action it will take. */
@@ -21,7 +26,9 @@ data class PreviewItem(
     /** For updates: the fields that will change. */
     val changes: List<FieldChange> = emptyList(),
     /** For invalid rows: one entry per failing field. */
-    val errors: List<RowError> = emptyList()
+    val errors: List<RowError> = emptyList(),
+    val sku: String? = null,
+    val optionValues: Map<String, String> = emptyMap(),
 )
 
 data class PreviewSummary(
@@ -31,7 +38,7 @@ data class PreviewSummary(
     val skippedRows: Int,
     val willInsert: Int,
     val willUpdate: Int,
-    val unchanged: Int
+    val unchanged: Int,
 )
 
 /**
@@ -43,5 +50,5 @@ data class PreviewResult(
     val status: ImportStatus,
     val summary: PreviewSummary,
     val page: PageInfo,
-    val items: List<PreviewItem>
+    val items: List<PreviewItem>,
 )

@@ -6,11 +6,10 @@ import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.ColumnSugge
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappedColumn
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingChoice
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.MappingPayload
-import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.SavedMapping
 import com.yasminhosam.brandora.feature.catalogimport.domain.mapping.StandardTarget
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile
-import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ExecuteResult
+import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportJobStatus
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.PreviewResult
 import com.yasminhosam.brandora.feature.catalogimport.domain.model.ValidationResult
@@ -24,24 +23,31 @@ class MappingUseCaseTest {
 
     private class FakeRepository(
         private val payload: ApiResult<MappingPayload> = PAYLOAD,
-        private val confirm: ApiResult<Unit> = ApiResult.Success(Unit)
+        private val confirm: ApiResult<Unit> = ApiResult.Success(Unit),
     ) : ExcelImportRepository {
         var getCalls = 0
             private set
+
         var confirmCalls = 0
             private set
+
         var lastColumns: List<MappedColumn>? = null
             private set
 
-        override suspend fun analyze(file: ExcelFile, sheetName: String?): ApiResult<ImportAnalysis> =
-            ApiResult.Error(ApiErrorType.UNKNOWN)
+        override suspend fun analyze(
+            file: ExcelFile,
+            sheetName: String?,
+        ): ApiResult<ImportAnalysis> = ApiResult.Error(ApiErrorType.UNKNOWN)
 
         override suspend fun getMapping(importId: String): ApiResult<MappingPayload> {
             getCalls++
             return payload
         }
 
-        override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> {
+        override suspend fun confirmMapping(
+            importId: String,
+            columns: List<MappedColumn>,
+        ): ApiResult<Unit> {
             confirmCalls++
             lastColumns = columns
             return confirm
@@ -50,11 +56,17 @@ class MappingUseCaseTest {
         override suspend fun validate(importId: String): ApiResult<ValidationResult> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
 
-        override suspend fun getValidationResults(importId: String, limit: Int, offset: Int): ApiResult<ValidationResult> =
-            ApiResult.Error(ApiErrorType.UNKNOWN)
+        override suspend fun getValidationResults(
+            importId: String,
+            limit: Int,
+            offset: Int,
+        ): ApiResult<ValidationResult> = ApiResult.Error(ApiErrorType.UNKNOWN)
 
-        override suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
-            ApiResult.Error(ApiErrorType.UNKNOWN)
+        override suspend fun getPreview(
+            importId: String,
+            limit: Int,
+            offset: Int,
+        ): ApiResult<PreviewResult> = ApiResult.Error(ApiErrorType.UNKNOWN)
 
         override suspend fun execute(importId: String): ApiResult<ExecuteResult> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
@@ -94,7 +106,16 @@ class MappingUseCaseTest {
     @Test
     fun `confirm sends valid columns`() = runBlocking {
         val repository = FakeRepository()
-        val columns = listOf(column())
+        val columns =
+            listOf(
+                column(),
+                MappedColumn(
+                    "Product Code",
+                    2,
+                    emptyList(),
+                    MappingChoice.Standard(StandardTarget.EXTERNAL_KEY),
+                ),
+            )
 
         val result = ConfirmMappingUseCase(repository)("job-1", columns)
 
@@ -117,7 +138,19 @@ class MappingUseCaseTest {
     @Test
     fun `confirm with a blank importId never touches the network`() = runBlocking {
         val repository = FakeRepository()
-        val result = ConfirmMappingUseCase(repository)(" ", listOf(column()))
+        val result =
+            ConfirmMappingUseCase(repository)(
+                " ",
+                listOf(
+                    column(),
+                    MappedColumn(
+                        "Product Code",
+                        2,
+                        emptyList(),
+                        MappingChoice.Standard(StandardTarget.EXTERNAL_KEY),
+                    ),
+                ),
+            )
 
         assertEquals(ApiErrorType.BAD_REQUEST, (result as ApiResult.Error).type)
         assertEquals(0, repository.confirmCalls)
@@ -126,19 +159,86 @@ class MappingUseCaseTest {
     @Test
     fun `confirm passes repository errors through`() = runBlocking {
         val failure = ApiResult.Error(ApiErrorType.CONFLICT)
-        val result = ConfirmMappingUseCase(FakeRepository(confirm = failure))("job-1", listOf(column()))
+        val result =
+            ConfirmMappingUseCase(FakeRepository(confirm = failure))(
+                "job-1",
+                listOf(
+                    column(),
+                    MappedColumn(
+                        "Product Code",
+                        2,
+                        emptyList(),
+                        MappingChoice.Standard(StandardTarget.EXTERNAL_KEY),
+                    ),
+                ),
+            )
 
         assertEquals(ApiErrorType.CONFLICT, (result as ApiResult.Error).type)
     }
 
-    private companion object {
-        val PAYLOAD = ApiResult.Success(
-            MappingPayload(
-                columns = listOf(
-                    ColumnSuggestion("Item Name", 1, listOf("Shirt"), "STANDARD", "name")
+    @Test
+    fun `confirm trims custom keys before validating and sending`() = runBlocking {
+        val repository = FakeRepository()
+        val columns =
+            listOf(
+                column(),
+                MappedColumn(
+                    "Product Code",
+                    2,
+                    emptyList(),
+                    MappingChoice.Standard(StandardTarget.EXTERNAL_KEY),
                 ),
-                savedMapping = null
+                MappedColumn(
+                    "Fabric",
+                    3,
+                    emptyList(),
+                    MappingChoice.CustomAttribute("  fabric "),
+                ),
             )
-        )
+
+        val result = ConfirmMappingUseCase(repository)("job-1", columns)
+
+        assertTrue(result is ApiResult.Success)
+        val sent = repository.lastColumns!!
+        assertEquals("fabric", (sent[2].choice as MappingChoice.CustomAttribute).key)
+    }
+
+    @Test
+    fun `confirm rejects a key that stays invalid even after trimming`() = runBlocking {
+        val repository = FakeRepository()
+        val columns =
+            listOf(
+                column(),
+                MappedColumn(
+                    "Product Code",
+                    2,
+                    emptyList(),
+                    MappingChoice.Standard(StandardTarget.EXTERNAL_KEY),
+                ),
+                MappedColumn(
+                    "Fabric",
+                    3,
+                    emptyList(),
+                    MappingChoice.CustomAttribute("fa bric"),
+                ),
+            )
+
+        val result = ConfirmMappingUseCase(repository)("job-1", columns)
+
+        assertEquals(ApiErrorType.BAD_REQUEST, (result as ApiResult.Error).type)
+        assertEquals(0, repository.confirmCalls)
+    }
+
+    private companion object {
+        val PAYLOAD =
+            ApiResult.Success(
+                MappingPayload(
+                    columns =
+                        listOf(
+                            ColumnSuggestion("Item Name", 1, listOf("Shirt"), "STANDARD", "name")
+                        ),
+                    savedMapping = null,
+                )
+            )
     }
 }

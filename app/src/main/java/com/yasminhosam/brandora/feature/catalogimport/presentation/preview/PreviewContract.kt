@@ -21,7 +21,9 @@ data class PreviewUiState(
     val nextOffset: Int? = null,
     val isLoadingMore: Boolean = false,
     val loadMoreErrorRes: Int? = null,
-    val errorRes: Int? = null
+    val errorRes: Int? = null,
+    /** Latches the one-shot Import/Back effects: either of them pops this screen. */
+    val isNavigating: Boolean = false
 ) : UiState {
 
     val hasMore: Boolean get() = nextOffset != null

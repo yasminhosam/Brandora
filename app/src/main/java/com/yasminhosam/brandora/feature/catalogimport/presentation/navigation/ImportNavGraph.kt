@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -13,6 +14,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.yasminhosam.brandora.core.navigation.Routes
@@ -32,46 +34,71 @@ import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.Upload
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadScreen
 import com.yasminhosam.brandora.feature.catalogimport.presentation.upload.UploadViewModel
 import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationEffect
+import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationEvent
 import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationScreen
 import com.yasminhosam.brandora.feature.catalogimport.presentation.validation.ValidationViewModel
 
 private val importIdArg = navArgument(ApiParams.PATH_IMPORT_ID) { type = NavType.StringType }
 
+/** Must match the placeholder in [Routes.IMPORT_GRAPH]. */
+private const val ONBOARDING_ARG = "onboarding"
+
 /**
- * Nested import graph: Upload → Mapping → Validate → Preview → Result.
- * [onImportDone] fires when the import flow finishes successfully and is popping back to
- * whichever tab opened it (used for the completion snackbar).
+ * True only for the automatic first-run entry straight after business creation. Read from the
+ * graph's own back stack entry, which is on the stack while any of its screens is showing.
+ */
+private fun NavHostController.isOnboardingImport(): Boolean =
+    getBackStackEntry(Routes.IMPORT_GRAPH).arguments?.getBoolean(ONBOARDING_ARG) == true
+
+/**
+ * Nested import graph: Upload → Mapping → Validate → Preview → Result. [onImportDone] fires when
+ * the import flow finishes successfully and is popping back to whichever tab opened it (used for
+ * the completion snackbar).
  */
 fun NavGraphBuilder.importGraph(nav: NavHostController, onImportDone: () -> Unit = {}) {
-    navigation(startDestination = Routes.UPLOAD, route = Routes.IMPORT_GRAPH) {
-
-        composable(Routes.UPLOAD) {
+    navigation(
+        startDestination = Routes.UPLOAD,
+        route = Routes.IMPORT_GRAPH,
+        // True only for the automatic first-run entry after business creation.
+        arguments =
+            listOf(navArgument(ONBOARDING_ARG) { type = NavType.BoolType; defaultValue = false }),
+    ) {
+        composable(Routes.UPLOAD) { backStackEntry ->
             val viewModel: UploadViewModel = hiltViewModel()
+            LaunchedEffect(Unit) { viewModel.onEvent(UploadEvent.ScreenEntered) }
             val state by viewModel.uiState.collectAsStateWithLifecycle()
             val context = LocalContext.current
+            // First run (straight after business creation) is the only entry that offers Skip;
+            // the Home and Products entries are deliberate visits the merchant can just leave.
+            val onboarding = remember(backStackEntry) { nav.isOnboardingImport() }
 
-            val picker = rememberLauncherForActivityResult(
-                ActivityResultContracts.OpenDocument()
-            ) { uri ->
-                if (uri != null) {
-                    try {
-                        context.contentResolver.takePersistableUriPermission(
-                            uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        )
-                    } catch (_: SecurityException) {
-                        // Providers without persistable grants still read fine this session.
+            val picker =
+                rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    if (uri != null) {
+                        try {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                            )
+                        } catch (_: SecurityException) {
+                            // Providers without persistable grants still read fine this session.
+                        }
+                        viewModel.onEvent(UploadEvent.FilePicked(uri.toString()))
                     }
-                    viewModel.onEvent(UploadEvent.FilePicked(uri.toString()))
                 }
-            }
 
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
                         is UploadEffect.NavigateToMapping ->
                             nav.navigate(Routes.mapping(effect.importId))
-                        UploadEffect.NavigateToManualEntry ->
-                            nav.navigate(Routes.ADD_PRODUCT)
+                        // Close the import flow; if in onboarding, continue to working hours.
+                        UploadEffect.NavigateToNextStep -> {
+                            nav.popBackStack(Routes.IMPORT_GRAPH, inclusive = true)
+                            if (onboarding) {
+                                nav.navigate(Routes.workingHours(onboarding = true))
+                            }
+                        }
                     }
                 }
             }
@@ -79,11 +106,12 @@ fun NavGraphBuilder.importGraph(nav: NavHostController, onImportDone: () -> Unit
             UploadScreen(
                 state = state,
                 onEvent = viewModel::onEvent,
-                onBrowseClick = { picker.launch(arrayOf("*/*")) }
+                onBrowseClick = { picker.launch(arrayOf("*/*")) },
+                // Leaving from Products (or Home) returns to that screen, not to Upload.
+                onBack = { nav.popBackStack(Routes.IMPORT_GRAPH, inclusive = true) },
+                showSkip = onboarding,
             )
         }
-
-        composable(Routes.ADD_PRODUCT) { AddProductPlaceholderScreen() }
 
         composable(Routes.MAPPING, arguments = listOf(importIdArg)) {
             val viewModel: MappingViewModel = hiltViewModel()
@@ -110,11 +138,13 @@ fun NavGraphBuilder.importGraph(nav: NavHostController, onImportDone: () -> Unit
             val viewModel: ValidationViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+            // Re-entry from Preview must re-arm the Continue navigation latch.
+            LaunchedEffect(Unit) { viewModel.onEvent(ValidationEvent.ScreenEntered) }
+
             LaunchedEffect(viewModel) {
                 viewModel.effects.collect { effect ->
                     when (effect) {
-                        ValidationEffect.NavigateToPreview ->
-                            nav.navigate(Routes.preview(importId))
+                        ValidationEffect.NavigateToPreview -> nav.navigate(Routes.preview(importId))
                         ValidationEffect.NavigateToUpload ->
                             nav.popBackStack(Routes.UPLOAD, inclusive = false)
                     }
@@ -143,9 +173,13 @@ fun NavGraphBuilder.importGraph(nav: NavHostController, onImportDone: () -> Unit
             PreviewScreen(state = state, onEvent = viewModel::onEvent)
         }
 
-        composable(Routes.RESULT, arguments = listOf(importIdArg)) {
+        composable(Routes.RESULT, arguments = listOf(importIdArg)) { backStackEntry ->
             val viewModel: ResultViewModel = hiltViewModel()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+            // Only the first-run entry continues to working hours. An import opened from Home or
+            // Products closes the flow back to that screen instead.
+            val onboarding = remember(backStackEntry) { nav.isOnboardingImport() }
 
             // Once the import has executed there is no valid "previous" screen — the backend
             // rejects preview/validate on an executed job (409 conflict). System Back mirrors
@@ -161,6 +195,9 @@ fun NavGraphBuilder.importGraph(nav: NavHostController, onImportDone: () -> Unit
                         ResultEffect.NavigateToHome -> {
                             onImportDone()
                             nav.popBackStack(Routes.IMPORT_GRAPH, inclusive = true)
+                            if (onboarding) {
+                                nav.navigate(Routes.workingHours(onboarding = true))
+                            }
                         }
                     }
                 }

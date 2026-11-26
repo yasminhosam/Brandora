@@ -43,16 +43,17 @@ class MappingViewModelTest {
     private class FakeRepository(
         private var payload: ApiResult<MappingPayload> = PAYLOAD,
         private var confirm: ApiResult<Unit> = ApiResult.Success(Unit),
-        private val confirmGate: CompletableDeferred<Unit>? = null
+        private val confirmGate: CompletableDeferred<Unit>? = null,
     ) : ExcelImportRepository {
         var getCalls = 0
             private set
+
         var confirmCalls = 0
             private set
 
         override suspend fun analyze(
             file: com.yasminhosam.brandora.feature.catalogimport.domain.model.ExcelFile,
-            sheetName: String?
+            sheetName: String?,
         ): ApiResult<com.yasminhosam.brandora.feature.catalogimport.domain.model.ImportAnalysis> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
 
@@ -61,7 +62,10 @@ class MappingViewModelTest {
             return payload
         }
 
-        override suspend fun confirmMapping(importId: String, columns: List<MappedColumn>): ApiResult<Unit> {
+        override suspend fun confirmMapping(
+            importId: String,
+            columns: List<MappedColumn>,
+        ): ApiResult<Unit> {
             confirmCalls++
             confirmGate?.await()
             return confirm
@@ -73,12 +77,14 @@ class MappingViewModelTest {
         override suspend fun getValidationResults(
             importId: String,
             limit: Int,
-            offset: Int
-        ): ApiResult<ValidationResult> =
-            ApiResult.Error(ApiErrorType.UNKNOWN)
+            offset: Int,
+        ): ApiResult<ValidationResult> = ApiResult.Error(ApiErrorType.UNKNOWN)
 
-        override suspend fun getPreview(importId: String, limit: Int, offset: Int): ApiResult<PreviewResult> =
-            ApiResult.Error(ApiErrorType.UNKNOWN)
+        override suspend fun getPreview(
+            importId: String,
+            limit: Int,
+            offset: Int,
+        ): ApiResult<PreviewResult> = ApiResult.Error(ApiErrorType.UNKNOWN)
 
         override suspend fun execute(importId: String): ApiResult<ExecuteResult> =
             ApiResult.Error(ApiErrorType.UNKNOWN)
@@ -99,13 +105,16 @@ class MappingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(repository: FakeRepository) = MappingViewModel(
-        getMapping = GetMappingUseCase(repository),
-        confirmMapping = ConfirmMappingUseCase(repository),
-        savedStateHandle = SavedStateHandle(mapOf(ApiParams.PATH_IMPORT_ID to "job-1"))
-    )
+    private fun viewModel(repository: FakeRepository) =
+        MappingViewModel(
+            getMapping = GetMappingUseCase(repository),
+            confirmMapping = ConfirmMappingUseCase(repository),
+            savedStateHandle = SavedStateHandle(mapOf(ApiParams.PATH_IMPORT_ID to "job-1")),
+        )
 
-    private fun CoroutineScope.collect(viewModel: MappingViewModel): Pair<MutableList<MappingEffect>, Job> {
+    private fun CoroutineScope.collect(
+        viewModel: MappingViewModel
+    ): Pair<MutableList<MappingEffect>, Job> {
         val effects = mutableListOf<MappingEffect>()
         val job = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
         return effects to job
@@ -116,7 +125,7 @@ class MappingViewModelTest {
         val state = viewModel(FakeRepository()).uiState.value
 
         assertEquals(false, state.isLoading)
-        assertEquals(2, state.columns.size)
+        assertEquals(3, state.columns.size)
         assertEquals(MappingChoice.Standard(StandardTarget.NAME), state.columns[0].choice)
         assertTrue(state.isNameMapped)
         assertTrue(state.canConfirm)
@@ -124,16 +133,25 @@ class MappingViewModelTest {
 
     @Test
     fun `init prefers a saved mapping over suggestions`() = runTest {
-        val repository = FakeRepository(
-            payload = ApiResult.Success(
-                MappingPayload(
-                    columns = listOf(
-                        ColumnSuggestion("Item Name", 1, emptyList(), "STANDARD", "name")
-                    ),
-                    savedMapping = listOf(SavedMapping("Item Name", 1, "IGNORE", null))
-                )
+        val repository =
+            FakeRepository(
+                payload =
+                    ApiResult.Success(
+                        MappingPayload(
+                            columns =
+                                listOf(
+                                    ColumnSuggestion(
+                                        "Item Name",
+                                        1,
+                                        emptyList(),
+                                        "STANDARD",
+                                        "name",
+                                    )
+                                ),
+                            savedMapping = listOf(SavedMapping("Item Name", 1, "IGNORE", null)),
+                        )
+                    )
             )
-        )
 
         val state = viewModel(repository).uiState.value
 
@@ -207,12 +225,14 @@ class MappingViewModelTest {
 
     @Test
     fun `confirm conflict navigates back with no banner`() = runTest {
-        val repository = FakeRepository(
-            confirm = ApiResult.Error(
-                ApiErrorType.CONFLICT,
-                errorCode = "IMPORT_NOT_AWAITING_MAPPING"
+        val repository =
+            FakeRepository(
+                confirm =
+                    ApiResult.Error(
+                        ApiErrorType.CONFLICT,
+                        errorCode = "IMPORT_NOT_AWAITING_MAPPING",
+                    )
             )
-        )
         val viewModel = viewModel(repository)
         val (effects, collection) = collect(viewModel)
 
@@ -225,12 +245,14 @@ class MappingViewModelTest {
 
     @Test
     fun `confirm validation error shows an inline banner`() = runTest {
-        val repository = FakeRepository(
-            confirm = ApiResult.Error(
-                ApiErrorType.BAD_REQUEST,
-                errorCode = "MAPPING_NAME_REQUIRED"
+        val repository =
+            FakeRepository(
+                confirm =
+                    ApiResult.Error(
+                        ApiErrorType.BAD_REQUEST,
+                        errorCode = "MAPPING_NAME_REQUIRED",
+                    )
             )
-        )
         val viewModel = viewModel(repository)
         val (effects, collection) = collect(viewModel)
 
@@ -255,9 +277,11 @@ class MappingViewModelTest {
 
     @Test
     fun `terminal load failure shows a message with back only`() = runTest {
-        val repository = FakeRepository(
-            payload = ApiResult.Error(ApiErrorType.NOT_FOUND, errorCode = "IMPORT_JOB_NOT_FOUND")
-        )
+        val repository =
+            FakeRepository(
+                payload =
+                    ApiResult.Error(ApiErrorType.NOT_FOUND, errorCode = "IMPORT_JOB_NOT_FOUND")
+            )
         val viewModel = viewModel(repository)
         val (effects, collection) = collect(viewModel)
 
@@ -284,15 +308,50 @@ class MappingViewModelTest {
         assertEquals(2, repository.getCalls)
     }
 
+    @Test
+    fun `double back sends exactly one pop`() = runTest {
+        val viewModel = viewModel(FakeRepository())
+        val (effects, collection) = collect(viewModel)
+
+        viewModel.onEvent(MappingEvent.BackClicked)
+        viewModel.onEvent(MappingEvent.BackClicked)
+
+        assertEquals(listOf(MappingEffect.NavigateBack), effects)
+        collection.cancel()
+    }
+
+    @Test
+    fun `a tap after confirm success sends no second navigation`() = runTest {
+        val repository = FakeRepository()
+        val viewModel = viewModel(repository)
+        val (effects, collection) = collect(viewModel)
+
+        viewModel.onEvent(MappingEvent.ConfirmClicked)
+        viewModel.onEvent(MappingEvent.ConfirmClicked)
+
+        assertEquals(listOf(MappingEffect.NavigateToValidate("job-1")), effects)
+        assertEquals(1, repository.confirmCalls)
+        collection.cancel()
+    }
+
     private companion object {
-        val PAYLOAD = ApiResult.Success(
-            MappingPayload(
-                columns = listOf(
-                    ColumnSuggestion("Item Name", 1, listOf("Shirt"), "STANDARD", "name"),
-                    ColumnSuggestion("Price", 2, listOf("10"), "STANDARD", "basePrice")
-                ),
-                savedMapping = null
+        val PAYLOAD =
+            ApiResult.Success(
+                MappingPayload(
+                    columns =
+                        listOf(
+                            ColumnSuggestion("Item Name", 1, listOf("Shirt"), "STANDARD", "name"),
+                            ColumnSuggestion("Price", 2, listOf("10"), "STANDARD", "basePrice"),
+                            ColumnSuggestion(
+                                "Product Code",
+                                3,
+                                listOf("P-1"),
+                                "STANDARD",
+                                "externalKey",
+                            ),
+                        ),
+                    savedMapping = null,
+                )
             )
-        )
     }
 }

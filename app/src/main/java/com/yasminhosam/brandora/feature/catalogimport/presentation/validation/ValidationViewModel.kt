@@ -21,16 +21,31 @@ class ValidationViewModel @Inject constructor(
 
     private val importId: String = savedStateHandle.get<String>(ApiParams.PATH_IMPORT_ID).orEmpty()
 
+    /** One startValidation POST at a time: a double-tapped Retry must not race (a repeat can 409). */
+    private var startValidationInFlight = false
+
     init { load() }
 
     override fun onEvent(event: ValidationEvent) {
         when (event) {
+            ValidationEvent.ScreenEntered -> setState { copy(isNavigating = false) }
             ValidationEvent.RetryClicked -> load()
             ValidationEvent.LoadMoreClicked -> loadMore()
             ValidationEvent.ContinueClicked -> {
-                if (uiState.value.canContinue) sendEffect(ValidationEffect.NavigateToPreview)
+                // canContinue includes the latch, so setting it here makes a double-tap send
+                // exactly one effect; ScreenEntered re-arms it on return from Preview.
+                if (uiState.value.canContinue) {
+                    setState { copy(isNavigating = true) }
+                    sendEffect(ValidationEffect.NavigateToPreview)
+                }
             }
-            ValidationEvent.FixClicked -> sendEffect(ValidationEffect.NavigateToUpload)
+            ValidationEvent.FixClicked -> {
+                // One pop per tap: a second effect would keep popping past Upload.
+                if (!uiState.value.isNavigating) {
+                    setState { copy(isNavigating = true) }
+                    sendEffect(ValidationEffect.NavigateToUpload)
+                }
+            }
         }
     }
 
@@ -41,22 +56,28 @@ class ValidationViewModel @Inject constructor(
             loadFirstPage()
             return
         }
+        if (startValidationInFlight) return
+        startValidationInFlight = true
         setState { copy(isLoading = true, errorRes = null) }
         viewModelScope.launch {
-            when (val result = startValidation(importId)) {
-                is ApiResult.Success -> setState {
-                    copy(
-                        status = result.data.status,
-                        summary = result.data.summary,
-                        totalCount = result.data.page.totalCount,
-                        nextOffset = result.data.page.nextOffset,
-                        rows = emptyList()
-                    )
-                }.also { loadFirstPage() }
+            try {
+                when (val result = startValidation(importId)) {
+                    is ApiResult.Success -> setState {
+                        copy(
+                            status = result.data.status,
+                            summary = result.data.summary,
+                            totalCount = result.data.page.totalCount,
+                            nextOffset = result.data.page.nextOffset,
+                            rows = emptyList()
+                        )
+                    }.also { loadFirstPage() }
 
-                is ApiResult.Error -> setState {
-                    copy(isLoading = false, errorRes = result.type.messageRes())
+                    is ApiResult.Error -> setState {
+                        copy(isLoading = false, errorRes = result.messageRes())
+                    }
                 }
+            } finally {
+                startValidationInFlight = false
             }
         }
     }
@@ -73,7 +94,7 @@ class ValidationViewModel @Inject constructor(
                 }
 
                 is ApiResult.Error -> setState {
-                    copy(isLoading = false, errorRes = result.type.messageRes())
+                    copy(isLoading = false, errorRes = result.messageRes())
                 }
             }
         }
@@ -94,7 +115,7 @@ class ValidationViewModel @Inject constructor(
                 }
 
                 is ApiResult.Error -> setState {
-                    copy(isLoadingMore = false, loadMoreErrorRes = result.type.messageRes())
+                    copy(isLoadingMore = false, loadMoreErrorRes = result.messageRes())
                 }
             }
         }

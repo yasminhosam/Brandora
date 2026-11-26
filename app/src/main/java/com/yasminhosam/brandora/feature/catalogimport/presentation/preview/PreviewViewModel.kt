@@ -25,8 +25,21 @@ class PreviewViewModel @Inject constructor(
         when (event) {
             PreviewEvent.RetryClicked -> loadFirstPage()
             PreviewEvent.LoadMoreClicked -> loadMore()
-            PreviewEvent.ImportClicked -> sendEffect(PreviewEffect.NavigateToExecute(importId))
-            PreviewEvent.BackToValidation -> sendEffect(PreviewEffect.NavigateBack)
+            // One-shot: canImport stays true until an effect pops this screen, so a
+            // double-tap must not push the Result step twice (each copy re-executes).
+            PreviewEvent.ImportClicked -> {
+                if (!uiState.value.isNavigating) {
+                    setState { copy(isNavigating = true) }
+                    sendEffect(PreviewEffect.NavigateToExecute(importId))
+                }
+            }
+            PreviewEvent.BackToValidation -> {
+                // One pop per tap: a second effect would keep popping past Validate.
+                if (!uiState.value.isNavigating) {
+                    setState { copy(isNavigating = true) }
+                    sendEffect(PreviewEffect.NavigateBack)
+                }
+            }
         }
     }
 
@@ -45,7 +58,7 @@ class PreviewViewModel @Inject constructor(
                 }
 
                 is ApiResult.Error -> setState {
-                    copy(isLoading = false, errorRes = result.type.messageRes())
+                    copy(isLoading = false, errorRes = result.messageRes())
                 }
             }
         }
@@ -66,7 +79,7 @@ class PreviewViewModel @Inject constructor(
                 }
 
                 is ApiResult.Error -> setState {
-                    copy(isLoadingMore = false, loadMoreErrorRes = result.type.messageRes())
+                    copy(isLoadingMore = false, loadMoreErrorRes = result.messageRes())
                 }
             }
         }
