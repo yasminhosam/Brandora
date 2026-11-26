@@ -35,12 +35,19 @@ class EncryptedSessionStore @Inject constructor(
     }
 
     override suspend fun save(session: AuthSession) {
-        val encoded = Base64.getEncoder().encodeToString(
-            cipher.encrypt(json.encodeToString(AuthSession.serializer(), session).toByteArray())
-        )
-        // commit(), not apply(): the tokens must be durable before the caller navigates or
-        // retries a request, and the blob is a few hundred bytes.
-        preferences.edit().putString(KEY_SESSION, encoded).commit()
+        // Keystore failures (key invalidated, restore onto a device without the key) must
+        // never crash a login: the session still works in memory for this process, and the
+        // next launch starts logged out - the same outcome as a blob that no longer decrypts.
+        try {
+            val encoded = Base64.getEncoder().encodeToString(
+                cipher.encrypt(json.encodeToString(AuthSession.serializer(), session).toByteArray())
+            )
+            // commit(), not apply(): the tokens must be durable before the caller navigates or
+            // retries a request, and the blob is a few hundred bytes.
+            preferences.edit().putString(KEY_SESSION, encoded).commit()
+        } catch (e: Exception) {
+            // Deliberately swallowed: see above; the in-memory session below still applies.
+        }
         _session.value = session
     }
 

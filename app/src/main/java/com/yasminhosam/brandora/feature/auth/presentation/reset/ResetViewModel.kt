@@ -1,128 +1,141 @@
 package com.yasminhosam.brandora.feature.auth.presentation.reset
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.yasminhosam.brandora.core.base.BaseViewModel
-import com.yasminhosam.brandora.core.network.ApiConfig
-import com.yasminhosam.brandora.core.network.ApiErrorType
-import com.yasminhosam.brandora.core.network.ApiResult
-import com.yasminhosam.brandora.core.network.AuthErrorCodes
-import com.yasminhosam.brandora.feature.auth.domain.usecase.ResetPasswordUseCase
-import com.yasminhosam.brandora.feature.auth.domain.validation.AuthPasswordError
-import com.yasminhosam.brandora.feature.auth.domain.validation.validateRegisterPassword
-import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldown
+import com.yasminhosam.brandora.core.network.*
+import com.yasminhosam.brandora.feature.auth.domain.usecase.*
+import com.yasminhosam.brandora.feature.auth.domain.validation.*
+import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldownTicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
-/**
- * Reset password: app-link token + new password -> POST /auth/reset-password (204).
- * The token enters through TokenArrived (never a route argument) and lives only in this
- * state; the password follows the SAME rules as Register and is never trimmed. On 204
- * the repository has already cleared the local session (all sessions were revoked), the
- * token and password are dropped from state, and the nav host lands on Login. A 400
- * AUTH_RESET_INVALID shows the dedicated invalid-link note; 429/503 runs the cooldown.
- */
 @HiltViewModel
-class ResetViewModel @Inject constructor(
-    private val resetPassword: ResetPasswordUseCase
-) : BaseViewModel<ResetUiState, ResetEvent, ResetEffect>(ResetUiState()) {
+class ResetViewModel
+@Inject
+constructor(
+    private val resetPassword: ResetPasswordUseCase,
+    private val forgotPassword: ForgotPasswordUseCase,
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+) : BaseViewModel<ResetUiState, ResetEvent, ResetEffect>(
+    ResetUiState(email = savedStateHandle.get<String>("email").orEmpty())
+) {
+    private val cooldownTicker =
+        AuthCooldownTicker(viewModelScope) { value -> setState { copy(cooldown = value) } }
 
-    private var cooldownJob: Job? = null
+    /** Waits between resends; only [ResetUiState.canResend] is gated by this one. */
+    private val resendTicker =
+        AuthCooldownTicker(viewModelScope) { value -> setState { copy(resendCooldown = value) } }
 
     override fun onEvent(event: ResetEvent) {
+        if (uiState.value.busy) return
         when (event) {
-            // A newer link supersedes the token the screen already holds, and any
-            // stale invalid-link note no longer applies.
-            is ResetEvent.TokenArrived -> setState {
-                copy(token = event.token, invalidLink = false, submitError = null)
-            }
-            is ResetEvent.PasswordChanged -> setState {
-                copy(
-                    password = event.value,
-                    passwordError = if (event.value.isBlank()) AuthPasswordError.REQUIRED else null
-                )
-            }
-            ResetEvent.PasswordFocusLost -> setState {
-                copy(passwordError = if (password.isBlank()) AuthPasswordError.REQUIRED else passwordError)
-            }
-            ResetEvent.SubmitClicked -> onSubmit()
+            is ResetEvent.EmailChanged ->
+                setState {
+                    copy(
+                        email = event.value,
+                        emailError = null,
+                        invalidCode = false,
+                        resendAcknowledged = false,
+                    )
+                }
+            is ResetEvent.OtpChanged ->
+                setState {
+                    copy(otp = event.value.take(128), otpFormatInvalid = false, invalidCode = false)
+                }
+            is ResetEvent.PasswordChanged ->
+                setState { copy(password = event.value, passwordError = null) }
+            ResetEvent.PasswordFocusLost ->
+                setState { copy(passwordError = validateRegisterPassword(password)) }
+            ResetEvent.SubmitClicked -> submit()
+            ResetEvent.ResendClicked -> resend()
         }
     }
 
-    private fun onSubmit() {
+    private fun submit() {
         val state = uiState.value
         if (!state.canSubmit) return
-
-        // No token (restored screen without its link): say so instead of sending anything.
-        val token = state.token
-        if (token == null) {
-            setState { copy(invalidLink = true) }
-            return
-        }
-
-        // Pure domain validation, identical to Register: 12-128 with an upper/lower/digit,
-        // NEVER trimmed - leading/trailing spaces are real characters.
+        val email = normalizeEmail(state.email)
+        val emailError = validateEmail(email)
         val passwordError = validateRegisterPassword(state.password)
-        if (passwordError != null) {
-            setState { copy(passwordError = passwordError) }
-            return
-        }
-
+        val badCode = !Regex("[0-9]{8}").matches(state.otp)
         setState {
-            copy(
-                isSubmitting = true,
-                submitError = null,
-                invalidLink = false,
-                passwordError = null
-            )
+            copy(emailError = emailError, passwordError = passwordError, otpFormatInvalid = badCode)
         }
+        if (emailError != null || passwordError != null || badCode) return
+        setState { copy(isSubmitting = true, submitError = null, invalidCode = false) }
         viewModelScope.launch {
-            when (val result = resetPassword(token, state.password)) {
+            when (val result = resetPassword(email, state.otp, state.password)) {
                 is ApiResult.Success -> {
-                    // Both secrets lived only in memory: drop them the moment the
-                    // request no longer needs them.
-                    setState { copy(isSubmitting = false, password = "", token = null) }
+                    setState { copy(isSubmitting = false, password = "", otp = "") }
                     sendEffect(ResetEffect.ResetSucceeded)
                 }
-                is ApiResult.Error -> onResetError(result)
+                is ApiResult.Error -> failure(result)
             }
         }
     }
 
-    private fun onResetError(result: ApiResult.Error) {
-        when {
-            // The link itself is gone: expired, already used, or superseded.
-            result.errorCode == AuthErrorCodes.AUTH_RESET_INVALID -> setState {
-                copy(isSubmitting = false, invalidLink = true, submitError = null)
+    private fun resend() {
+        val state = uiState.value
+        if (!state.canResend) return
+        val email = normalizeEmail(state.email)
+        val error = validateEmail(email)
+        if (error != null) {
+            setState { copy(emailError = error) }
+            return
+        }
+        setState { copy(isResending = true, submitError = null, resendAcknowledged = false) }
+        // Explicit tap only. A network timeout never triggers a second email.
+        viewModelScope.launch {
+            when (val result = forgotPassword(email)) {
+                is ApiResult.Success -> {
+                    setState {
+                        copy(
+                            isResending = false,
+                            otp = "",
+                            invalidCode = false,
+                            resendAcknowledged = true,
+                        )
+                    }
+                    // Resend wait: gates resend only, so a code the user already has can
+                    // still be submitted while this counts down.
+                    resendTicker.start(
+                        ApiConfig.RATE_LIMIT_FALLBACK_SECONDS,
+                        ApiErrorType.AUTH_RATE_LIMITED,
+                    )
+                }
+                is ApiResult.Error -> failure(result)
             }
+        }
+    }
 
+    private fun failure(result: ApiResult.Error) {
+        val rateLimited =
             result.type == ApiErrorType.AUTH_RATE_LIMITED ||
-                result.type == ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE -> startCooldown(result)
-
-            else -> setState {
-                copy(isSubmitting = false, submitError = result.type, invalidLink = false)
-            }
-        }
-    }
-
-    /** Disables submit for Retry-After seconds (30s fallback) with the matching countdown copy. */
-    private fun startCooldown(result: ApiResult.Error) {
-        val seconds = result.retryAfterSeconds?.takeIf { it > 0 }
-            ?: ApiConfig.RATE_LIMIT_FALLBACK_SECONDS
-        cooldownJob?.cancel()
+                result.type == ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE
         setState {
-            copy(isSubmitting = false, submitError = null, cooldown = AuthCooldown(seconds, result.type))
+            copy(
+                isSubmitting = false,
+                isResending = false,
+                // One message at a time: a rate limit is told by its countdown, an invalid
+                // code by the field note, anything else by its typed line - and any failure
+                // supersedes the stale "code sent" acknowledgment.
+                submitError =
+                    when {
+                        rateLimited -> null
+                        result.errorCode == AuthErrorCodes.AUTH_RESET_INVALID -> null
+                        else -> result.type
+                    },
+                invalidCode = result.errorCode == AuthErrorCodes.AUTH_RESET_INVALID,
+                resendAcknowledged = false,
+            )
         }
-        cooldownJob = viewModelScope.launch {
-            var remaining = seconds
-            while (remaining > 0) {
-                delay(1_000)
-                remaining--
-                setState { copy(cooldown = cooldown?.copy(seconds = remaining)) }
-            }
-            setState { copy(cooldown = null) }
-        }
+        if (rateLimited)
+            cooldownTicker.start(
+                result.retryAfterSeconds?.takeIf { it > 0 }
+                    ?: ApiConfig.RATE_LIMIT_FALLBACK_SECONDS,
+                result.type,
+            )
     }
 }

@@ -10,34 +10,43 @@ import javax.inject.Inject
 import retrofit2.Retrofit
 
 /**
- * Uses the dedicated auth Retrofit instance (short timeouts): a hung refresh would otherwise
- * keep an OkHttp authenticator thread blocked for the upload-length timeouts.
+ * Uses the dedicated auth Retrofit instance (short timeouts): a hung refresh would otherwise keep
+ * an OkHttp authenticator thread blocked for the upload-length timeouts.
  */
-class AuthRemoteDataSource @Inject constructor(
+class AuthRemoteDataSource
+@Inject
+constructor(
     @AuthRetrofit retrofit: Retrofit,
-    private val errorHandler: ApiErrorHandler
+    private val errorHandler: ApiErrorHandler,
 ) {
 
     private val api: AuthApiService = retrofit.create(AuthApiService::class.java)
 
     suspend fun register(email: String, password: String): ApiResult<AuthSession> =
-        errorHandler.safeApiCall {
-            api.register(CredentialsRequestDto(email = email, password = password))
-        }.map { it.toDomain() }
+        errorHandler
+            .safeApiCall {
+                api.register(CredentialsRequestDto(email = email, password = password))
+            }
+            .map { it.toDomain() }
 
     suspend fun login(email: String, password: String): ApiResult<AuthSession> =
-        errorHandler.safeApiCall { api.login(CredentialsRequestDto(email = email, password = password)) }
+        errorHandler
+            .safeApiCall { api.login(CredentialsRequestDto(email = email, password = password)) }
             .map { it.toDomain() }
 
     suspend fun refresh(refreshToken: String): ApiResult<AuthSession> =
-        errorHandler.safeApiCall { api.refresh(RefreshRequestDto(refreshToken = refreshToken)) }
+        errorHandler
+            .safeApiCall { api.refresh(RefreshRequestDto(refreshToken = refreshToken)) }
             .map { it.toDomain() }
 
-    suspend fun forgotPassword(email: String): ApiResult<Unit> =
-        errorHandler.safeApiCall { api.forgotPassword(ForgotPasswordRequestDto(email = email)) }
+    suspend fun forgotPassword(email: String): ApiResult<Unit> = errorHandler.safeApiCall {
+        api.forgotPassword(ForgotPasswordRequestDto(email = email))
+    }
 
-    suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
+    suspend fun resetPassword(email: String, otp: String, newPassword: String): ApiResult<Unit> =
         errorHandler.safeApiCall {
-            api.resetPassword(ResetPasswordRequestDto(token = token, newPassword = newPassword))
+            api.resetPassword(
+                ResetPasswordRequestDto(email = email, otp = otp, newPassword = newPassword)
+            )
         }
 }

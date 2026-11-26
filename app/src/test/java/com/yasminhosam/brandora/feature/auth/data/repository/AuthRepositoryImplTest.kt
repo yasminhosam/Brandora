@@ -9,7 +9,6 @@ import com.yasminhosam.brandora.feature.auth.domain.model.AuthSession
 import com.yasminhosam.brandora.feature.auth.domain.model.AuthUser
 import com.yasminhosam.brandora.feature.auth.testing.FakeSessionStore
 import java.io.IOException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
@@ -30,8 +29,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 /**
- * Exercises the session-persistence rules of AuthRepositoryImpl against a fake backend
- * (an OkHttp interceptor fabricates responses; no extra test libraries).
+ * Exercises the session-persistence rules of AuthRepositoryImpl against a fake backend (an OkHttp
+ * interceptor fabricates responses; no extra test libraries).
  */
 class AuthRepositoryImplTest {
 
@@ -58,19 +57,21 @@ class AuthRepositoryImplTest {
     private fun repository(
         backend: FakeBackend,
         store: FakeSessionStore,
-        signal: SessionExpiredSignal = SessionExpiredSignal()
+        signal: SessionExpiredSignal = SessionExpiredSignal(),
     ): Triple<AuthRepositoryImpl, FakeSessionStore, SessionExpiredSignal> {
         val client = OkHttpClient.Builder().addInterceptor(backend).build()
-        val retrofit = Retrofit.Builder()
-            .baseUrl("http://localhost:3000/")
-            .client(client)
-            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
-            .build()
+        val retrofit =
+            Retrofit.Builder()
+                .baseUrl("http://localhost:3000/")
+                .client(client)
+                .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+                .build()
         val remote = AuthRemoteDataSource(retrofit, ApiErrorHandler(json))
         return Triple(AuthRepositoryImpl(remote, store, signal), store, signal)
     }
 
-    private fun sessionResponse(accessToken: String, refreshToken: String): String = """
+    private fun sessionResponse(accessToken: String, refreshToken: String): String =
+        """
         {
           "user": {"id": "u1", "email": "a@b.c"},
           "accessToken": "$accessToken",
@@ -79,26 +80,34 @@ class AuthRepositoryImplTest {
           "expiresIn": 900,
           "refreshExpiresAt": "2026-10-30T09:00:00Z"
         }
-    """.trimIndent()
+    """
+            .trimIndent()
 
     private fun errorBody(statusCode: Int, code: String): String =
         """{"statusCode":$statusCode,"code":"$code","message":"x","error":"Unauthorized"}"""
 
-    private fun response(request: Request, code: Int, body: String = "", retryAfter: String? = null): Response {
-        var builder = Response.Builder()
-            .request(request)
-            .protocol(Protocol.HTTP_1_1)
-            .code(code)
-            .message("mock")
+    private fun response(
+        request: Request,
+        code: Int,
+        body: String = "",
+        retryAfter: String? = null,
+    ): Response {
+        var builder =
+            Response.Builder()
+                .request(request)
+                .protocol(Protocol.HTTP_1_1)
+                .code(code)
+                .message("mock")
         if (retryAfter != null) builder = builder.header("Retry-After", retryAfter)
         return builder.body(body.toResponseBody("application/json".toMediaType())).build()
     }
 
     @Test
     fun `a successful login persists the session`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request -> response(request, 200, sessionResponse("at-1", "rt-1")) }
-        }
+        val backend =
+            FakeBackend().apply {
+                respond = { request -> response(request, 200, sessionResponse("at-1", "rt-1")) }
+            }
         val store = FakeSessionStore()
         val (repository, _, _) = repository(backend, store)
 
@@ -112,11 +121,12 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a failed login leaves any existing session untouched`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 401, errorBody(401, AuthErrorCodes.INVALID_CREDENTIALS))
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(request, 401, errorBody(401, AuthErrorCodes.INVALID_CREDENTIALS))
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
@@ -131,9 +141,10 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a successful refresh rotates and persists the tokens`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request -> response(request, 200, sessionResponse("at-2", "rt-2")) }
-        }
+        val backend =
+            FakeBackend().apply {
+                respond = { request -> response(request, 200, sessionResponse("at-2", "rt-2")) }
+            }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
@@ -147,9 +158,12 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `AUTH_REFRESH_INVALID clears the session and emits the expired signal`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request -> response(request, 401, errorBody(401, AuthErrorCodes.AUTH_REFRESH_INVALID)) }
-        }
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(request, 401, errorBody(401, AuthErrorCodes.AUTH_REFRESH_INVALID))
+                }
+            }
         val store = FakeSessionStore(OLD)
         val signal = SessionExpiredSignal()
         val expired = mutableListOf<Unit>()
@@ -179,25 +193,37 @@ class AuthRepositoryImplTest {
         val result = repository.refresh()
 
         assertTrue(result is ApiResult.Error)
-        assertEquals(com.yasminhosam.brandora.core.network.ApiErrorType.NETWORK, (result as ApiResult.Error).type)
+        assertEquals(
+            com.yasminhosam.brandora.core.network.ApiErrorType.NETWORK,
+            (result as ApiResult.Error).type,
+        )
         assertEquals(1, store.clears)
         assertNull(store.session.value)
     }
 
     @Test
     fun `a rate-limited refresh keeps the session`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 429, errorBody(429, AuthErrorCodes.AUTH_RATE_LIMITED), retryAfter = "30")
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(
+                        request,
+                        429,
+                        errorBody(429, AuthErrorCodes.AUTH_RATE_LIMITED),
+                        retryAfter = "30",
+                    )
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val signal = SessionExpiredSignal()
         val (repository, _, _) = repository(backend, store, signal)
 
         val result = repository.refresh()
 
-        assertEquals(com.yasminhosam.brandora.core.network.ApiErrorType.AUTH_RATE_LIMITED, (result as ApiResult.Error).type)
+        assertEquals(
+            com.yasminhosam.brandora.core.network.ApiErrorType.AUTH_RATE_LIMITED,
+            (result as ApiResult.Error).type,
+        )
         assertEquals(30L, result.retryAfterSeconds)
         assertEquals(0, store.clears)
         assertEquals(OLD.accessToken, store.session.value?.accessToken)
@@ -211,7 +237,10 @@ class AuthRepositoryImplTest {
 
         val result = repository.refresh()
 
-        assertEquals(com.yasminhosam.brandora.core.network.ApiErrorType.UNAUTHORIZED, (result as ApiResult.Error).type)
+        assertEquals(
+            com.yasminhosam.brandora.core.network.ApiErrorType.UNAUTHORIZED,
+            (result as ApiResult.Error).type,
+        )
         assertEquals(0, backend.requests)
         assertEquals(0, store.clears)
     }
@@ -219,14 +248,16 @@ class AuthRepositoryImplTest {
     @Test
     fun `the refresh request carries the stored refresh token`() = runBlocking {
         var refreshBody: String? = null
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                refreshBody = request.body?.let { body ->
-                    okio.Buffer().also { body.writeTo(it) }.readUtf8()
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    refreshBody =
+                        request.body?.let { body ->
+                            okio.Buffer().also { body.writeTo(it) }.readUtf8()
+                        }
+                    response(request, 200, sessionResponse("at-2", "rt-2"))
                 }
-                response(request, 200, sessionResponse("at-2", "rt-2"))
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
@@ -238,9 +269,10 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a successful register persists the session (201)`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request -> response(request, 201, sessionResponse("at-1", "rt-1")) }
-        }
+        val backend =
+            FakeBackend().apply {
+                respond = { request -> response(request, 201, sessionResponse("at-1", "rt-1")) }
+            }
         val store = FakeSessionStore()
         val (repository, _, _) = repository(backend, store)
 
@@ -254,11 +286,12 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a rejected registration leaves any existing session untouched`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 409, errorBody(409, AuthErrorCodes.EMAIL_UNAVAILABLE))
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(request, 409, errorBody(409, AuthErrorCodes.EMAIL_UNAVAILABLE))
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
@@ -275,11 +308,16 @@ class AuthRepositoryImplTest {
     fun `a successful forgot-password request never touches the session`() = runBlocking {
         // The 200 body is the backend's generic message: parsed by Retrofit's Unit
         // converter (closed, never read) and never shown to the user.
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 200, """{"statusCode":200,"message":"If an account exists..."}""")
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(
+                        request,
+                        200,
+                        """{"statusCode":200,"message":"If an account exists..."}""",
+                    )
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
@@ -293,13 +331,14 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a successful reset (204) revokes the local session`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request -> response(request, 204) } // No Content: empty body
-        }
+        val backend =
+            FakeBackend().apply {
+                respond = { request -> response(request, 204) } // No Content: empty body
+            }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
-        val result = repository.resetPassword("tok-1", "Secret1Abcdefg")
+        val result = repository.resetPassword("a@b.c", "01234567", "Secret1Abcdefg")
 
         assertTrue(result is ApiResult.Success)
         assertEquals(1, store.clears)
@@ -308,15 +347,16 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a rejected reset keeps the session (only a 204 revokes it)`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 400, errorBody(400, AuthErrorCodes.AUTH_RESET_INVALID))
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(request, 400, errorBody(400, AuthErrorCodes.AUTH_RESET_INVALID))
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
-        val result = repository.resetPassword("expired", "Secret1Abcdefg")
+        val result = repository.resetPassword("a@b.c", "99999999", "Secret1Abcdefg")
 
         assertTrue(result is ApiResult.Error)
         assertEquals(AuthErrorCodes.AUTH_RESET_INVALID, (result as ApiResult.Error).errorCode)
@@ -326,18 +366,27 @@ class AuthRepositoryImplTest {
 
     @Test
     fun `a rate-limited reset keeps the session and carries Retry-After`() = runBlocking {
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                response(request, 429, errorBody(429, AuthErrorCodes.AUTH_RATE_LIMITED), retryAfter = "30")
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    response(
+                        request,
+                        429,
+                        errorBody(429, AuthErrorCodes.AUTH_RATE_LIMITED),
+                        retryAfter = "30",
+                    )
+                }
             }
-        }
         val store = FakeSessionStore(OLD)
         val (repository, _, _) = repository(backend, store)
 
-        val result = repository.resetPassword("tok-1", "Secret1Abcdefg")
+        val result = repository.resetPassword("a@b.c", "01234567", "Secret1Abcdefg")
 
         val error = result as ApiResult.Error
-        assertEquals(com.yasminhosam.brandora.core.network.ApiErrorType.AUTH_RATE_LIMITED, error.type)
+        assertEquals(
+            com.yasminhosam.brandora.core.network.ApiErrorType.AUTH_RATE_LIMITED,
+            error.type,
+        )
         assertEquals(30L, error.retryAfterSeconds)
         assertEquals(0, store.clears)
         assertEquals(OLD.accessToken, store.session.value?.accessToken)
@@ -346,38 +395,40 @@ class AuthRepositoryImplTest {
     @Test
     fun `the forgot and reset requests carry exactly the contract fields`() = runBlocking {
         val bodies = mutableMapOf<String, String>()
-        val backend = FakeBackend().apply {
-            respond = { request ->
-                request.body?.let { body ->
-                    val buffer = okio.Buffer()
-                    body.writeTo(buffer)
-                    bodies[request.url.encodedPath] = buffer.readUtf8()
-                }
-                if (request.url.encodedPath.endsWith("forgot-password")) {
-                    response(request, 200, """{"statusCode":200}""")
-                } else {
-                    response(request, 204)
+        val backend =
+            FakeBackend().apply {
+                respond = { request ->
+                    request.body?.let { body ->
+                        val buffer = okio.Buffer()
+                        body.writeTo(buffer)
+                        bodies[request.url.encodedPath] = buffer.readUtf8()
+                    }
+                    if (request.url.encodedPath.endsWith("forgot-password")) {
+                        response(request, 200, """{"statusCode":200}""")
+                    } else {
+                        response(request, 204)
+                    }
                 }
             }
-        }
         val store = FakeSessionStore()
         val (repository, _, _) = repository(backend, store)
 
         repository.forgotPassword("a@b.c")
-        repository.resetPassword("tok-1", "Secret1Abcdefg")
+        repository.resetPassword("a@b.c", "01234567", "Secret1Abcdefg")
 
         assertEquals("""{"email":"a@b.c"}""", bodies["/auth/forgot-password"])
         assertEquals(
-            """{"token":"tok-1","newPassword":"Secret1Abcdefg"}""",
-            bodies["/auth/reset-password"]
+            """{"email":"a@b.c","otp":"01234567","newPassword":"Secret1Abcdefg"}""",
+            bodies["/auth/reset-password"],
         )
     }
 
     private companion object {
-        val OLD = AuthSession(
-            user = AuthUser(id = "u1"),
-            accessToken = "access-old",
-            refreshToken = "refresh-old"
-        )
+        val OLD =
+            AuthSession(
+                user = AuthUser(id = "u1"),
+                accessToken = "access-old",
+                refreshToken = "refresh-old",
+            )
     }
 }

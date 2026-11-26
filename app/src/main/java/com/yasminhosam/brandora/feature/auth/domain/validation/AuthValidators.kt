@@ -36,14 +36,27 @@ fun validateEmail(normalized: String): AuthEmailError? = when {
 /**
  * Register password: NEVER trimmed - leading/trailing spaces are real characters. Symbols and
  * spaces are allowed anywhere; one lowercase, one uppercase and one digit must all appear.
+ *
+ * The predicates below are the single source of truth for BOTH this validator and the Register
+ * screen's live checklist, so the checklist can never drift from what submit actually enforces.
  */
+fun passwordTooShort(password: String): Boolean = password.length < PASSWORD_MIN_LENGTH
+
+fun passwordTooLong(password: String): Boolean = password.length > PASSWORD_MAX_LENGTH
+
+fun passwordMissingUppercase(password: String): Boolean = password.none { it.isUpperCase() }
+
+fun passwordMissingLowercase(password: String): Boolean = password.none { it.isLowerCase() }
+
+fun passwordMissingDigit(password: String): Boolean = password.none { it.isDigit() }
+
 fun validateRegisterPassword(password: String): AuthPasswordError? = when {
     password.isBlank() -> AuthPasswordError.REQUIRED
-    password.length < PASSWORD_MIN_LENGTH -> AuthPasswordError.TOO_SHORT
-    password.length > PASSWORD_MAX_LENGTH -> AuthPasswordError.TOO_LONG
-    password.none { it.isLowerCase() } ||
-        password.none { it.isUpperCase() } ||
-        password.none { it.isDigit() } -> AuthPasswordError.MISSING_COMPLEXITY
+    passwordTooShort(password) -> AuthPasswordError.TOO_SHORT
+    passwordTooLong(password) -> AuthPasswordError.TOO_LONG
+    passwordMissingUppercase(password) ||
+        passwordMissingLowercase(password) ||
+        passwordMissingDigit(password) -> AuthPasswordError.MISSING_COMPLEXITY
     else -> null
 }
 

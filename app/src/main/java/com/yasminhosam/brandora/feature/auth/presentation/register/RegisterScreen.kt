@@ -55,7 +55,11 @@ import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.ui.cooldownMessageRes
 import com.yasminhosam.brandora.core.ui.messageRes
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
-import com.yasminhosam.brandora.feature.auth.domain.validation.PASSWORD_MIN_LENGTH
+import com.yasminhosam.brandora.feature.auth.domain.validation.passwordMissingDigit
+import com.yasminhosam.brandora.feature.auth.domain.validation.passwordMissingLowercase
+import com.yasminhosam.brandora.feature.auth.domain.validation.passwordMissingUppercase
+import com.yasminhosam.brandora.feature.auth.domain.validation.passwordTooLong
+import com.yasminhosam.brandora.feature.auth.domain.validation.passwordTooShort
 import com.yasminhosam.brandora.feature.auth.presentation.AuthBrandHeader
 import com.yasminhosam.brandora.feature.auth.presentation.fieldMessageRes
 
@@ -129,6 +133,7 @@ fun RegisterScreen(
                     }
                 },
             singleLine = true,
+            enabled = !state.isSubmitting,
             isError = state.emailError != null,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
@@ -167,6 +172,7 @@ fun RegisterScreen(
                     }
                 },
             singleLine = true,
+            enabled = !state.isSubmitting,
             isError = state.passwordError != null,
             visualTransformation =
                 if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -202,22 +208,29 @@ fun RegisterScreen(
             }
         )
         // Live checklist: each rule turns green as it is satisfied, so the password can be
-        // composed correctly the first time instead of failing on submit. The rules stay
-        // visible even while the field's error message is shown.
+        // composed correctly the first time instead of failing on submit. Every row is one
+        // of validateRegisterPassword's own predicates, so the list can never drift from
+        // what submit actually enforces (the length row also covers the 128-char cap).
         val password = state.password
         val rules = listOf(
             stringResource(R.string.register_rule_length) to
-                (password.length >= PASSWORD_MIN_LENGTH),
-            stringResource(R.string.register_rule_uppercase) to password.any { it.isUpperCase() },
-            stringResource(R.string.register_rule_lowercase) to password.any { it.isLowerCase() },
-            stringResource(R.string.register_rule_digit) to password.any { it.isDigit() }
+                (!passwordTooShort(password) && !passwordTooLong(password)),
+            stringResource(R.string.register_rule_uppercase) to
+                !passwordMissingUppercase(password),
+            stringResource(R.string.register_rule_lowercase) to
+                !passwordMissingLowercase(password),
+            stringResource(R.string.register_rule_digit) to !passwordMissingDigit(password)
         )
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             rules.forEach { (rule, satisfied) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = if (satisfied) Icons.Default.Check else Icons.Default.Close,
-                        contentDescription = null,
+                        contentDescription =
+                            stringResource(
+                                if (satisfied) R.string.register_rule_met
+                                else R.string.register_rule_not_met
+                            ),
                         modifier = Modifier.size(14.dp),
                         tint = if (satisfied) scheme.primary else scheme.onSurfaceVariant
                     )

@@ -125,6 +125,7 @@ fun LoginScreen(
                     }
                 },
             singleLine = true,
+            enabled = !state.isSubmitting,
             isError = state.invalidCredentials || state.emailError != null,
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
@@ -163,6 +164,7 @@ fun LoginScreen(
                     }
                 },
             singleLine = true,
+            enabled = !state.isSubmitting,
             isError = state.invalidCredentials || state.passwordError != null,
             visualTransformation =
                 if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),

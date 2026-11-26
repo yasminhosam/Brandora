@@ -9,40 +9,41 @@ import com.yasminhosam.brandora.feature.auth.domain.usecase.ForgotPasswordUseCas
 import com.yasminhosam.brandora.feature.auth.domain.validation.AuthEmailError
 import com.yasminhosam.brandora.feature.auth.domain.validation.normalizeEmail
 import com.yasminhosam.brandora.feature.auth.domain.validation.validateEmail
-import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldown
+import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldownTicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Forgot password: email -> POST /auth/forgot-password. Local domain validation runs
- * before any request, and a 200 ALWAYS shows the same generic copy - the reply never
- * confirms whether the address exists. A 429/503 disables submit for Retry-After (or a
- * 30s fallback) seconds; the 503 AUTH_EMAIL_UNAVAILABLE is a plain typed error (no
- * Retry-After in that contract), so the button just becomes usable again.
+ * Forgot password: email -> POST /auth/forgot-password. Local domain validation runs before any
+ * request, and a 200 ALWAYS shows the same generic copy - the reply never confirms whether the
+ * address exists. A 429/503 disables submit for Retry-After (or a 30s fallback) seconds; the 503
+ * AUTH_EMAIL_UNAVAILABLE is a plain typed error (no Retry-After in that contract), so the button
+ * just becomes usable again.
  */
 @HiltViewModel
-class ForgotViewModel @Inject constructor(
-    private val forgotPassword: ForgotPasswordUseCase
-) : BaseViewModel<ForgotUiState, ForgotEvent, ForgotEffect>(ForgotUiState()) {
+class ForgotViewModel @Inject constructor(private val forgotPassword: ForgotPasswordUseCase) :
+    BaseViewModel<ForgotUiState, ForgotEvent, ForgotEffect>(ForgotUiState()) {
 
-    private var cooldownJob: Job? = null
+    private val cooldownTicker =
+        AuthCooldownTicker(viewModelScope) { value -> setState { copy(cooldown = value) } }
 
     override fun onEvent(event: ForgotEvent) {
+        if (uiState.value.isSubmitting) return
         when (event) {
             // Fresh input invalidates the previous note, and an erased field becomes
             // required again immediately.
-            is ForgotEvent.EmailChanged -> setState {
-                copy(
-                    email = event.value,
-                    emailError = if (event.value.isBlank()) AuthEmailError.REQUIRED else null
-                )
-            }
-            ForgotEvent.EmailFocusLost -> setState {
-                copy(emailError = if (email.isBlank()) AuthEmailError.REQUIRED else emailError)
-            }
+            is ForgotEvent.EmailChanged ->
+                setState {
+                    copy(
+                        email = event.value,
+                        emailError = if (event.value.isBlank()) AuthEmailError.REQUIRED else null,
+                    )
+                }
+            ForgotEvent.EmailFocusLost ->
+                setState {
+                    copy(emailError = if (email.isBlank()) AuthEmailError.REQUIRED else emailError)
+                }
             ForgotEvent.SubmitClicked -> onSubmit()
         }
     }
@@ -63,8 +64,7 @@ class ForgotViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = forgotPassword(email)) {
                 // Success: the SAME copy for every address, delivered or not.
-                is ApiResult.Success ->
-                    setState { copy(isSubmitting = false, isSubmitted = true) }
+                is ApiResult.Success -> setState { copy(isSubmitting = false, isSubmitted = true) }
                 is ApiResult.Error -> onForgotError(result)
             }
         }
@@ -81,20 +81,9 @@ class ForgotViewModel @Inject constructor(
 
     /** Disables submit for Retry-After seconds (30s fallback) with the matching countdown copy. */
     private fun startCooldown(result: ApiResult.Error) {
-        val seconds = result.retryAfterSeconds?.takeIf { it > 0 }
-            ?: ApiConfig.RATE_LIMIT_FALLBACK_SECONDS
-        cooldownJob?.cancel()
-        setState {
-            copy(isSubmitting = false, submitError = null, cooldown = AuthCooldown(seconds, result.type))
-        }
-        cooldownJob = viewModelScope.launch {
-            var remaining = seconds
-            while (remaining > 0) {
-                delay(1_000)
-                remaining--
-                setState { copy(cooldown = cooldown?.copy(seconds = remaining)) }
-            }
-            setState { copy(cooldown = null) }
-        }
+        val seconds =
+            result.retryAfterSeconds?.takeIf { it > 0 } ?: ApiConfig.RATE_LIMIT_FALLBACK_SECONDS
+        setState { copy(isSubmitting = false, submitError = null) }
+        cooldownTicker.start(seconds, result.type)
     }
 }

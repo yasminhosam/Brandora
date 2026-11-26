@@ -116,4 +116,28 @@ class AuthValidatorsTest {
             validateLoginPassword("p".repeat(PASSWORD_MAX_LENGTH + 1))
         )
     }
+
+    @Test
+    fun `the checklist predicates and the validator never disagree`() {
+        val samples =
+            listOf(
+                "",
+                "   ",
+                "short1A",
+                "aaaaaaaaAAAA", // no digit
+                "aaaaaaaa1111", // no uppercase
+                "AAAAAAA11111", // no lowercase
+                "Ab 1!defghij", // valid
+                "Aa1" + "x".repeat(PASSWORD_MAX_LENGTH - 2), // 129 chars -> too long
+            )
+        samples.forEach { password ->
+            val checklistSaysValid =
+                !passwordTooShort(password) &&
+                    !passwordTooLong(password) &&
+                    !passwordMissingUppercase(password) &&
+                    !passwordMissingLowercase(password) &&
+                    !passwordMissingDigit(password)
+            assertEquals(password, checklistSaysValid, validateRegisterPassword(password) == null)
+        }
+    }
 }

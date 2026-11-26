@@ -13,12 +13,10 @@ import com.yasminhosam.brandora.feature.auth.domain.validation.AuthPasswordError
 import com.yasminhosam.brandora.feature.auth.domain.validation.normalizeEmail
 import com.yasminhosam.brandora.feature.auth.domain.validation.validateEmail
 import com.yasminhosam.brandora.feature.auth.domain.validation.validateRegisterPassword
-import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldown
+import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldownTicker
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -35,7 +33,8 @@ class RegisterViewModel @Inject constructor(
     private val currentBusinessStore: CurrentBusinessStore
 ) : BaseViewModel<RegisterUiState, RegisterEvent, RegisterEffect>(RegisterUiState()) {
 
-    private var cooldownJob: Job? = null
+    private val cooldownTicker =
+        AuthCooldownTicker(viewModelScope) { value -> setState { copy(cooldown = value) } }
 
     override fun onEvent(event: RegisterEvent) {
         when (event) {
@@ -89,6 +88,8 @@ class RegisterViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     // Persisting happened in the repository; only the landing screen is
                     // chosen here, exactly like BrandoraRoot's startup choice.
+                    // A brand-new account never inherits a business stored by someone else.
+                    currentBusinessStore.clearUnlessOwnedBy(result.data.user.id)
                     val nextRoute =
                         if (currentBusinessStore.businessId.first() == null) {
                             Routes.BUSINESS_CREATE
@@ -129,22 +130,7 @@ class RegisterViewModel @Inject constructor(
     private fun startCooldown(result: ApiResult.Error) {
         val seconds = result.retryAfterSeconds?.takeIf { it > 0 }
             ?: ApiConfig.RATE_LIMIT_FALLBACK_SECONDS
-        cooldownJob?.cancel()
-        setState {
-            copy(
-                isSubmitting = false,
-                submitError = null,
-                cooldown = AuthCooldown(seconds, result.type)
-            )
-        }
-        cooldownJob = viewModelScope.launch {
-            var remaining = seconds
-            while (remaining > 0) {
-                delay(1_000)
-                remaining--
-                setState { copy(cooldown = cooldown?.copy(seconds = remaining)) }
-            }
-            setState { copy(cooldown = null) }
-        }
+        setState { copy(isSubmitting = false, submitError = null) }
+        cooldownTicker.start(seconds, result.type)
     }
 }

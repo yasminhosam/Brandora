@@ -43,7 +43,7 @@ class LoginViewModelTest {
     private class FakeAuthRepository(
         private val result: ApiResult<AuthSession>,
         /** When set, login suspends until completed - keeps a submit actually "in flight". */
-        private val gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        private val gate: kotlinx.coroutines.CompletableDeferred<Unit>? = null,
     ) : AuthRepository {
         var calls = 0
             private set
@@ -70,13 +70,26 @@ class LoginViewModelTest {
         override suspend fun forgotPassword(email: String): ApiResult<Unit> =
             error("not under test")
 
-        override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
-            error("not under test")
+        override suspend fun resetPassword(
+            email: String,
+            otp: String,
+            newPassword: String,
+        ): ApiResult<Unit> = error("not under test")
     }
 
-    private class FakeBusinessStore(id: String?) : CurrentBusinessStore {
-        override val businessId: Flow<String?> = MutableStateFlow(id)
-        override suspend fun setBusinessId(id: String) = error("not under test")
+    private class FakeBusinessStore(
+        id: String?,
+        // The user that created the stored business; mirrors the real owner check.
+        private val owner: String? = "u1",
+    ) : CurrentBusinessStore {
+        private val _businessId = MutableStateFlow(id)
+        override val businessId: Flow<String?> = _businessId
+
+        override suspend fun setBusinessId(id: String, ownerId: String?) = error("not under test")
+
+        override suspend fun clearUnlessOwnedBy(userId: String) {
+            if (_businessId.value != null && owner != userId) _businessId.value = null
+        }
     }
 
     @Before
@@ -91,11 +104,13 @@ class LoginViewModelTest {
 
     private fun viewModel(
         repository: FakeAuthRepository = FakeAuthRepository(SUCCESS),
-        businessId: String? = "biz-1"
-    ) = LoginViewModel(
-        login = LoginUseCase(repository),
-        currentBusinessStore = FakeBusinessStore(businessId)
-    )
+        businessId: String? = "biz-1",
+        owner: String? = "u1",
+    ) =
+        LoginViewModel(
+            login = LoginUseCase(repository),
+            currentBusinessStore = FakeBusinessStore(businessId, owner),
+        )
 
     private fun LoginViewModel.submit(email: String, password: String) {
         onEvent(LoginEvent.EmailChanged(email))
@@ -104,252 +119,305 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `a successful login lands on Home when a business is known`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(SUCCESS)
-        val viewModel = viewModel(repository = repository, businessId = "biz-1")
-        val effects = mutableListOf<LoginEffect>()
-        val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
+    fun `a successful login lands on Home when a business is known`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(repository = repository, businessId = "biz-1")
+            val effects = mutableListOf<LoginEffect>()
+            val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
 
-        viewModel.onEvent(LoginEvent.EmailChanged(" shop@dates.example "))
-        viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
-        viewModel.onEvent(LoginEvent.SubmitClicked)
+            viewModel.onEvent(LoginEvent.EmailChanged(" shop@dates.example "))
+            viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
+            viewModel.onEvent(LoginEvent.SubmitClicked)
 
-        // Trimmed before it reaches the backend.
-        assertEquals("shop@dates.example", repository.lastEmail)
-        assertEquals(listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.HOME)), effects)
-        assertFalse(viewModel.uiState.value.isSubmitting)
-        collection.cancel()
-    }
-
-    @Test
-    fun `login without a business lands on Business Create`() = runTest(scheduler) {
-        val viewModel = viewModel(businessId = null)
-        val effects = mutableListOf<LoginEffect>()
-        val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
-
-        viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
-        viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
-        viewModel.onEvent(LoginEvent.SubmitClicked)
-
-        assertEquals(
-            listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.BUSINESS_CREATE)),
-            effects
-        )
-        collection.cancel()
-    }
+            // Trimmed before it reaches the backend.
+            assertEquals("shop@dates.example", repository.lastEmail)
+            assertEquals(listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.HOME)), effects)
+            assertFalse(viewModel.uiState.value.isSubmitting)
+            collection.cancel()
+        }
 
     @Test
-    fun `a blank field never reaches the backend`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(SUCCESS)
-        val viewModel = viewModel(repository = repository)
+    fun `login without a business lands on Business Create`() =
+        runTest(scheduler) {
+            val viewModel = viewModel(businessId = null)
+            val effects = mutableListOf<LoginEffect>()
+            val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
 
-        viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
-        viewModel.onEvent(LoginEvent.PasswordChanged("   "))
-        viewModel.onEvent(LoginEvent.SubmitClicked)
+            viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
+            viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
+            viewModel.onEvent(LoginEvent.SubmitClicked)
 
-        assertEquals(0, repository.calls)
-        assertFalse(viewModel.uiState.value.isSubmitting)
-    }
-
-    @Test
-    fun `an invalid email never reaches the backend`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(SUCCESS)
-        val viewModel = viewModel(repository = repository)
-
-        viewModel.submit("not-an-email", "secret")
-
-        assertEquals(0, repository.calls)
-        assertEquals(AuthEmailError.INVALID, viewModel.uiState.value.emailError)
-        assertFalse(viewModel.uiState.value.isSubmitting)
-    }
+            assertEquals(
+                listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.BUSINESS_CREATE)),
+                effects,
+            )
+            collection.cancel()
+        }
 
     @Test
-    fun `a too-long login password is rejected locally`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(SUCCESS)
-        val viewModel = viewModel(repository = repository)
+    fun `a business created by another user is not inherited after login`() =
+        runTest(scheduler) {
+            val viewModel = viewModel(businessId = "biz-1", owner = "u2")
+            val effects = mutableListOf<LoginEffect>()
+            val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
 
-        viewModel.submit("a@b.c", "p".repeat(PASSWORD_MAX_LENGTH + 1))
+            viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
+            viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
+            viewModel.onEvent(LoginEvent.SubmitClicked)
 
-        assertEquals(0, repository.calls)
-        assertEquals(AuthPasswordError.TOO_LONG, viewModel.uiState.value.passwordError)
-    }
-
-    @Test
-    fun `the email is normalized before the request`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(SUCCESS)
-        val viewModel = viewModel(repository = repository)
-
-        viewModel.submit("  Shop@Dates.Example  ", "secret")
-
-        assertEquals("shop@dates.example", repository.lastEmail)
-    }
+            assertEquals(
+                listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.BUSINESS_CREATE)),
+                effects,
+            )
+            collection.cancel()
+        }
 
     @Test
-    fun `the password is cleared from state on success`() = runTest(scheduler) {
-        val viewModel = viewModel()
+    fun `a blank field never reaches the backend`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(repository = repository)
 
-        viewModel.submit("a@b.c", "secret")
+            viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
+            viewModel.onEvent(LoginEvent.PasswordChanged("   "))
+            viewModel.onEvent(LoginEvent.SubmitClicked)
 
-        assertEquals("", viewModel.uiState.value.password)
-    }
-
-    @Test
-    fun `blurring an empty field marks it required`() = runTest(scheduler) {
-        val viewModel = viewModel()
-
-        viewModel.onEvent(LoginEvent.EmailFocusLost)
-        viewModel.onEvent(LoginEvent.PasswordFocusLost)
-
-        val state = viewModel.uiState.value
-        assertEquals(AuthEmailError.REQUIRED, state.emailError)
-        assertEquals(AuthPasswordError.REQUIRED, state.passwordError)
-    }
+            assertEquals(0, repository.calls)
+            assertFalse(viewModel.uiState.value.isSubmitting)
+        }
 
     @Test
-    fun `erasing a filled field marks it required`() = runTest(scheduler) {
-        val viewModel = viewModel()
+    fun `an invalid email never reaches the backend`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(repository = repository)
 
-        viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
-        viewModel.onEvent(LoginEvent.EmailChanged(""))
+            viewModel.submit("not-an-email", "secret")
 
-        assertEquals(AuthEmailError.REQUIRED, viewModel.uiState.value.emailError)
-    }
-
-    @Test
-    fun `INVALID_CREDENTIALS shows the inline message instead of the generic error`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(
-            ApiResult.Error(ApiErrorType.UNAUTHORIZED, errorCode = AuthErrorCodes.INVALID_CREDENTIALS)
-        )
-        val viewModel = viewModel(repository = repository)
-
-        viewModel.submit("a@b.c", "wrong")
-
-        val state = viewModel.uiState.value
-        assertTrue(state.invalidCredentials)
-        assertNull(state.submitError)
-        assertFalse(state.isSubmitting)
-        assertEquals(1, repository.calls)
-    }
+            assertEquals(0, repository.calls)
+            assertEquals(AuthEmailError.INVALID, viewModel.uiState.value.emailError)
+            assertFalse(viewModel.uiState.value.isSubmitting)
+        }
 
     @Test
-    fun `VALIDATION_ERROR shows the generic invalid-input message`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(
-            ApiResult.Error(ApiErrorType.BAD_REQUEST, errorCode = AuthErrorCodes.VALIDATION_ERROR)
-        )
-        val viewModel = viewModel(repository = repository)
+    fun `a too-long login password is rejected locally`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(repository = repository)
 
-        viewModel.submit("a@b.c", "secret")
+            viewModel.submit("a@b.c", "p".repeat(PASSWORD_MAX_LENGTH + 1))
 
-        val state = viewModel.uiState.value
-        assertEquals(ApiErrorType.BAD_REQUEST, state.submitError)
-        // The shared generic copy: no backend text is ever shown.
-        assertEquals(R.string.error_bad_request, state.submitError?.messageRes())
-    }
+            assertEquals(0, repository.calls)
+            assertEquals(AuthPasswordError.TOO_LONG, viewModel.uiState.value.passwordError)
+        }
 
     @Test
-    fun `a non-credential failure surfaces the typed error`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(ApiResult.Error(ApiErrorType.SERVER))
-        val viewModel = viewModel(repository = repository)
+    fun `the email is normalized before the request`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(repository = repository)
 
-        viewModel.submit("a@b.c", "secret")
+            viewModel.submit("  Shop@Dates.Example  ", "secret")
 
-        val state = viewModel.uiState.value
-        assertEquals(ApiErrorType.SERVER, state.submitError)
-        assertFalse(state.invalidCredentials)
-        assertFalse(state.isSubmitting)
-        assertNull(state.cooldown)
-    }
+            assertEquals("shop@dates.example", repository.lastEmail)
+        }
 
     @Test
-    fun `a rate-limited login disables submit until the cooldown ends`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(
-            ApiResult.Error(ApiErrorType.AUTH_RATE_LIMITED, retryAfterSeconds = 5)
-        )
-        val viewModel = viewModel(repository = repository)
+    fun `the password is cleared from state on success`() =
+        runTest(scheduler) {
+            val viewModel = viewModel()
 
-        viewModel.submit("a@b.c", "secret")
+            viewModel.submit("a@b.c", "secret")
 
-        val cooling = viewModel.uiState.value
-        assertEquals(5L, cooling.cooldown?.seconds)
-        assertEquals(ApiErrorType.AUTH_RATE_LIMITED, cooling.cooldown?.type)
-        assertFalse(cooling.canSubmit)
-        assertNull(cooling.submitError)
-
-        // Submit is refused for the whole window...
-        viewModel.onEvent(LoginEvent.SubmitClicked)
-        assertEquals(1, repository.calls)
-
-        // ...and comes back once the countdown reaches zero.
-        scheduler.advanceTimeBy(6_000L)
-        assertNull(viewModel.uiState.value.cooldown)
-        assertTrue(viewModel.uiState.value.canSubmit)
-    }
+            assertEquals("", viewModel.uiState.value.password)
+        }
 
     @Test
-    fun `a rate limit without Retry-After falls back to 30 seconds`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(ApiResult.Error(ApiErrorType.AUTH_RATE_LIMITED))
-        val viewModel = viewModel(repository = repository)
+    fun `blurring an empty field marks it required`() =
+        runTest(scheduler) {
+            val viewModel = viewModel()
 
-        viewModel.submit("a@b.c", "secret")
+            viewModel.onEvent(LoginEvent.EmailFocusLost)
+            viewModel.onEvent(LoginEvent.PasswordFocusLost)
 
-        assertEquals(
-            ApiConfig.RATE_LIMIT_FALLBACK_SECONDS,
-            viewModel.uiState.value.cooldown?.seconds
-        )
-        scheduler.advanceUntilIdle()
-    }
-
-    @Test
-    fun `the 503-unavailable contract uses its own countdown type`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(
-            ApiResult.Error(ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE, retryAfterSeconds = 10)
-        )
-        val viewModel = viewModel(repository = repository)
-
-        viewModel.submit("a@b.c", "secret")
-
-        val cooldown = viewModel.uiState.value.cooldown
-        assertEquals(10L, cooldown?.seconds)
-        assertEquals(ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE, cooldown?.type)
-        scheduler.advanceUntilIdle()
-    }
+            val state = viewModel.uiState.value
+            assertEquals(AuthEmailError.REQUIRED, state.emailError)
+            assertEquals(AuthPasswordError.REQUIRED, state.passwordError)
+        }
 
     @Test
-    fun `editing after a rejected attempt clears the credentials note`() = runTest(scheduler) {
-        val repository = FakeAuthRepository(
-            ApiResult.Error(ApiErrorType.UNAUTHORIZED, errorCode = AuthErrorCodes.INVALID_CREDENTIALS)
-        )
-        val viewModel = viewModel(repository = repository)
+    fun `erasing a filled field marks it required`() =
+        runTest(scheduler) {
+            val viewModel = viewModel()
 
-        viewModel.submit("a@b.c", "wrong")
-        viewModel.onEvent(LoginEvent.PasswordChanged("fixed"))
+            viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
+            viewModel.onEvent(LoginEvent.EmailChanged(""))
 
-        assertFalse(viewModel.uiState.value.invalidCredentials)
-    }
+            assertEquals(AuthEmailError.REQUIRED, viewModel.uiState.value.emailError)
+        }
 
     @Test
-    fun `double submit while in flight is ignored`() = runTest(scheduler) {
-        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val repository = FakeAuthRepository(SUCCESS, gate)
-        val viewModel = viewModel(repository = repository)
+    fun `INVALID_CREDENTIALS shows the inline message instead of the generic error`() =
+        runTest(scheduler) {
+            val repository =
+                FakeAuthRepository(
+                    ApiResult.Error(
+                        ApiErrorType.UNAUTHORIZED,
+                        errorCode = AuthErrorCodes.INVALID_CREDENTIALS,
+                    )
+                )
+            val viewModel = viewModel(repository = repository)
 
-        viewModel.submit("a@b.c", "secret")
-        // Still suspended inside login: the state is mid-flight for the second click.
-        viewModel.onEvent(LoginEvent.SubmitClicked)
+            viewModel.submit("a@b.c", "wrong")
 
-        assertEquals(1, repository.calls)
-        assertTrue(viewModel.uiState.value.isSubmitting)
+            val state = viewModel.uiState.value
+            assertTrue(state.invalidCredentials)
+            assertNull(state.submitError)
+            assertFalse(state.isSubmitting)
+            assertEquals(1, repository.calls)
+        }
 
-        gate.complete(Unit)
-    }
+    @Test
+    fun `VALIDATION_ERROR shows the generic invalid-input message`() =
+        runTest(scheduler) {
+            val repository =
+                FakeAuthRepository(
+                    ApiResult.Error(
+                        ApiErrorType.BAD_REQUEST,
+                        errorCode = AuthErrorCodes.VALIDATION_ERROR,
+                    )
+                )
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+
+            val state = viewModel.uiState.value
+            assertEquals(ApiErrorType.BAD_REQUEST, state.submitError)
+            // The shared generic copy: no backend text is ever shown.
+            assertEquals(R.string.error_bad_request, state.submitError?.messageRes())
+        }
+
+    @Test
+    fun `a non-credential failure surfaces the typed error`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(ApiResult.Error(ApiErrorType.SERVER))
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+
+            val state = viewModel.uiState.value
+            assertEquals(ApiErrorType.SERVER, state.submitError)
+            assertFalse(state.invalidCredentials)
+            assertFalse(state.isSubmitting)
+            assertNull(state.cooldown)
+        }
+
+    @Test
+    fun `a rate-limited login disables submit until the cooldown ends`() =
+        runTest(scheduler) {
+            val repository =
+                FakeAuthRepository(
+                    ApiResult.Error(ApiErrorType.AUTH_RATE_LIMITED, retryAfterSeconds = 5)
+                )
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+
+            val cooling = viewModel.uiState.value
+            assertEquals(5L, cooling.cooldown?.seconds)
+            assertEquals(ApiErrorType.AUTH_RATE_LIMITED, cooling.cooldown?.type)
+            assertFalse(cooling.canSubmit)
+            assertNull(cooling.submitError)
+
+            // Submit is refused for the whole window...
+            viewModel.onEvent(LoginEvent.SubmitClicked)
+            assertEquals(1, repository.calls)
+
+            // ...and comes back once the countdown reaches zero.
+            scheduler.advanceTimeBy(6_000L)
+            assertNull(viewModel.uiState.value.cooldown)
+            assertTrue(viewModel.uiState.value.canSubmit)
+        }
+
+    @Test
+    fun `a rate limit without Retry-After falls back to 30 seconds`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(ApiResult.Error(ApiErrorType.AUTH_RATE_LIMITED))
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+
+            assertEquals(
+                ApiConfig.RATE_LIMIT_FALLBACK_SECONDS,
+                viewModel.uiState.value.cooldown?.seconds,
+            )
+            scheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `the 503-unavailable contract uses its own countdown type`() =
+        runTest(scheduler) {
+            val repository =
+                FakeAuthRepository(
+                    ApiResult.Error(
+                        ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE,
+                        retryAfterSeconds = 10,
+                    )
+                )
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+
+            val cooldown = viewModel.uiState.value.cooldown
+            assertEquals(10L, cooldown?.seconds)
+            assertEquals(ApiErrorType.AUTH_RATE_LIMIT_UNAVAILABLE, cooldown?.type)
+            scheduler.advanceUntilIdle()
+        }
+
+    @Test
+    fun `editing after a rejected attempt clears the credentials note`() =
+        runTest(scheduler) {
+            val repository =
+                FakeAuthRepository(
+                    ApiResult.Error(
+                        ApiErrorType.UNAUTHORIZED,
+                        errorCode = AuthErrorCodes.INVALID_CREDENTIALS,
+                    )
+                )
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "wrong")
+            viewModel.onEvent(LoginEvent.PasswordChanged("fixed"))
+
+            assertFalse(viewModel.uiState.value.invalidCredentials)
+        }
+
+    @Test
+    fun `double submit while in flight is ignored`() =
+        runTest(scheduler) {
+            val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val repository = FakeAuthRepository(SUCCESS, gate)
+            val viewModel = viewModel(repository = repository)
+
+            viewModel.submit("a@b.c", "secret")
+            // Still suspended inside login: the state is mid-flight for the second click.
+            viewModel.onEvent(LoginEvent.SubmitClicked)
+
+            assertEquals(1, repository.calls)
+            assertTrue(viewModel.uiState.value.isSubmitting)
+
+            gate.complete(Unit)
+        }
 
     private companion object {
-        val SUCCESS = ApiResult.Success(
-            AuthSession(
-                user = AuthUser(id = "u1", email = "a@b.c"),
-                accessToken = "at",
-                refreshToken = "rt"
+        val SUCCESS =
+            ApiResult.Success(
+                AuthSession(
+                    user = AuthUser(id = "u1", email = "a@b.c"),
+                    accessToken = "at",
+                    refreshToken = "rt",
+                )
             )
-        )
     }
 }

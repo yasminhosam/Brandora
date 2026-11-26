@@ -13,21 +13,23 @@ import javax.inject.Inject
 /**
  * Session persistence rules, the heart of the single-use refresh-token contract:
  *
- * - login/register success -> save the new session (rotated tokens) before returning;
- *                             a failed call never touches the stored session.
- * - refresh rejected       -> AUTH_REFRESH_INVALID means the token was used/revoked;
- *                             clear the session and let the caller surface Login.
- * - refresh response lost  -> NETWORK/TIMEOUT: the backend may have consumed the token
- *                             without answering, and a single-use token must never be
- *                             retried - clear the session instead of risking revocation.
- * - refresh rate-limited   -> tokens may still be valid; fail WITHOUT clearing.
- * - reset password success  -> the 204 revokes every session server-side, so the local one
- *                             is dropped too; a FAILED reset never touches the session.
+ * - login/register success -> save the new session (rotated tokens) before returning; a failed call
+ *   never touches the stored session.
+ * - refresh rejected -> AUTH_REFRESH_INVALID means the token was used/revoked; clear the session
+ *   and let the caller surface Login.
+ * - refresh response lost -> NETWORK/TIMEOUT: the backend may have consumed the token without
+ *   answering, and a single-use token must never be retried - clear the session instead of risking
+ *   revocation.
+ * - refresh rate-limited -> tokens may still be valid; fail WITHOUT clearing.
+ * - reset password success -> the 204 revokes every session server-side, so the local one is
+ *   dropped too; a FAILED reset never touches the session.
  */
-class AuthRepositoryImpl @Inject constructor(
+class AuthRepositoryImpl
+@Inject
+constructor(
     private val remote: AuthRemoteDataSource,
     private val sessionStore: SessionStore,
-    private val expiredSignal: SessionExpiredSignal
+    private val expiredSignal: SessionExpiredSignal,
 ) : AuthRepository {
 
     override suspend fun register(email: String, password: String): ApiResult<AuthSession> =
@@ -44,8 +46,8 @@ class AuthRepositoryImpl @Inject constructor(
         }
 
     override suspend fun refresh(): ApiResult<AuthSession> {
-        val current = sessionStore.session.value
-            ?: return ApiResult.Error(ApiErrorType.UNAUTHORIZED)
+        val current =
+            sessionStore.session.value ?: return ApiResult.Error(ApiErrorType.UNAUTHORIZED)
 
         return remote.refresh(current.refreshToken).also { result ->
             when {
@@ -57,7 +59,7 @@ class AuthRepositoryImpl @Inject constructor(
                 result.errorTypeIs(ApiErrorType.NETWORK) ||
                     result.errorTypeIs(ApiErrorType.TIMEOUT) -> expire()
 
-                // 429 or anything else: keep the session; the tokens may still be valid.
+            // 429 or anything else: keep the session; the tokens may still be valid.
             }
         }
     }
@@ -65,15 +67,22 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun forgotPassword(email: String): ApiResult<Unit> =
         remote.forgotPassword(email)
 
-    override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
-        remote.resetPassword(token, newPassword).also { result ->
-            // Only a 204 revokes the sessions: an invalid token or a rate limit must not
+    override suspend fun resetPassword(
+        email: String,
+        otp: String,
+        newPassword: String,
+    ): ApiResult<Unit> =
+        remote.resetPassword(email, otp, newPassword).also { result ->
+            // Only a 204 revokes the sessions: an invalid code or a rate limit must not
             // log anyone out (and no expired-signal here - the Reset screen owns its
             // navigation, with its own message).
             if (result is ApiResult.Success) sessionStore.clear()
         }
 
     private suspend fun expire() {
+        // The stored business id is deliberately kept: it is owner-tagged and reconciled by
+        // the next login (CurrentBusinessStore.clearUnlessOwnedBy), so the same user keeps
+        // their business while another account never inherits it.
         sessionStore.clear()
         expiredSignal.emit()
     }

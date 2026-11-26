@@ -14,14 +14,13 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * The heart of the single-use refresh-token contract: parallel 401s produce exactly ONE
- * refresh, and a lost/failed refresh never hands the old token back to a caller.
+ * The heart of the single-use refresh-token contract: parallel 401s produce exactly ONE refresh,
+ * and a lost/failed refresh never hands the old token back to a caller.
  */
 class SessionRefresherTest {
 
-    private class FakeAuthRepository(
-        private val onRefresh: suspend () -> ApiResult<AuthSession>
-    ) : AuthRepository {
+    private class FakeAuthRepository(private val onRefresh: suspend () -> ApiResult<AuthSession>) :
+        AuthRepository {
         var refreshCalls = 0
             private set
 
@@ -39,8 +38,11 @@ class SessionRefresherTest {
         override suspend fun forgotPassword(email: String): ApiResult<Unit> =
             error("not under test")
 
-        override suspend fun resetPassword(token: String, newPassword: String): ApiResult<Unit> =
-            error("not under test")
+        override suspend fun resetPassword(
+            email: String,
+            otp: String,
+            newPassword: String,
+        ): ApiResult<Unit> = error("not under test")
     }
 
     @Test
@@ -55,9 +57,10 @@ class SessionRefresherTest {
         }
         val refresher = SessionRefresher(RefreshSessionUseCase(repository), store)
 
-        val callers = (1..5).map {
-            async { refresher.validAccessToken(OLD.accessToken) }
-        }
+        val callers =
+            (1..5).map {
+                async { refresher.validAccessToken(OLD.accessToken) }
+            }
         // Let all five start: one owns the refresh, the rest queue on the single-flight lock.
         kotlinx.coroutines.yield()
         gate.complete(Unit)
@@ -124,15 +127,17 @@ class SessionRefresherTest {
     }
 
     private companion object {
-        val OLD = AuthSession(
-            user = AuthUser(id = "u1"),
-            accessToken = "access-old",
-            refreshToken = "refresh-old"
-        )
-        val NEW = AuthSession(
-            user = AuthUser(id = "u1"),
-            accessToken = "access-new",
-            refreshToken = "refresh-new"
-        )
+        val OLD =
+            AuthSession(
+                user = AuthUser(id = "u1"),
+                accessToken = "access-old",
+                refreshToken = "refresh-old",
+            )
+        val NEW =
+            AuthSession(
+                user = AuthUser(id = "u1"),
+                accessToken = "access-new",
+                refreshToken = "refresh-new",
+            )
     }
 }
