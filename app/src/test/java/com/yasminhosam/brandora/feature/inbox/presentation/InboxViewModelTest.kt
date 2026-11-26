@@ -81,7 +81,23 @@ class InboxViewModelTest {
         vm.onEvent(InboxEvent.RefreshRequested)
         assertEquals(1, vm.uiState.value.conversations.size)
         assertNull(vm.uiState.value.errorRes)
-        assertNotNull(vm.uiState.value.loadMoreErrorRes)
+        assertNotNull(vm.uiState.value.refreshErrorRes)
+        assertNull(vm.uiState.value.loadMoreErrorRes)
         assertFalse(vm.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun screenResume_skipsTheFirstResume_andRefreshesOnReturn() {
+        repo.conversationsResult = { _, _ -> ApiResult.Success(PagedList(listOf(conversation("1")), 1, null)) }
+        val vm = vm()
+        assertEquals(1, repo.conversationCalls.size)
+
+        // The first resume arrives with the initial load, so it must not fetch again.
+        vm.onEvent(InboxEvent.ScreenResumed)
+        assertEquals(1, repo.conversationCalls.size)
+
+        // Coming back from Chat is a real resume and refreshes the list.
+        vm.onEvent(InboxEvent.ScreenResumed)
+        assertEquals(2, repo.conversationCalls.size)
     }
 }

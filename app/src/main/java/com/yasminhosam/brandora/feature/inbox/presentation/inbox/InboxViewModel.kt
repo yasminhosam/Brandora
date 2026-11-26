@@ -20,6 +20,9 @@ class InboxViewModel @Inject constructor(
     // response for the old filter can never overwrite the new list.
     private var loadJob: Job? = null
 
+    /** The first ON_RESUME accompanies the initial load; only later resumes refresh. */
+    private var hasResumed = false
+
     init { loadFirstPage() }
 
     override fun onEvent(event: InboxEvent) {
@@ -35,17 +38,41 @@ class InboxViewModel @Inject constructor(
                         isRefreshing = false,
                         isLoadingMore = false,
                         errorRes = null,
+                        refreshErrorRes = null,
                         loadMoreErrorRes = null
                     )
                 }
                 loadFirstPage()
             }
             InboxEvent.RetryClicked -> {
-                setState { copy(isLoading = true, errorRes = null) }
+                setState { copy(isLoading = true, errorRes = null, refreshErrorRes = null) }
                 loadFirstPage()
             }
             InboxEvent.RefreshRequested -> {
-                setState { copy(isRefreshing = true, isLoadingMore = false, loadMoreErrorRes = null) }
+                setState {
+                    copy(
+                        isRefreshing = true,
+                        isLoadingMore = false,
+                        loadMoreErrorRes = null,
+                        refreshErrorRes = null
+                    )
+                }
+                loadFirstPage()
+            }
+            InboxEvent.ScreenResumed -> {
+                if (!hasResumed) {
+                    hasResumed = true
+                    return
+                }
+                if (uiState.value.isLoading || uiState.value.isRefreshing) return
+                setState {
+                    copy(
+                        isRefreshing = true,
+                        isLoadingMore = false,
+                        loadMoreErrorRes = null,
+                        refreshErrorRes = null
+                    )
+                }
                 loadFirstPage()
             }
             InboxEvent.LoadMoreClicked -> loadMore()
@@ -64,16 +91,23 @@ class InboxViewModel @Inject constructor(
                         nextOffset = result.data.nextOffset,
                         isLoading = false,
                         isRefreshing = false,
-                        errorRes = null
+                        isLoadingMore = false,
+                        errorRes = null,
+                        refreshErrorRes = null,
+                        loadMoreErrorRes = null
                     )
                 }
                 is ApiResult.Error -> setState {
-                    // A failed pull-to-refresh keeps the old list visible instead of blanking it.
+                    // A failed pull-to-refresh keeps the old list visible instead of blanking
+                    // it; only a failed first load replaces the screen with an error.
+                    val hasItems = conversations.isNotEmpty()
                     copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorRes = if (conversations.isEmpty()) result.type.messageRes() else null,
-                        loadMoreErrorRes = if (conversations.isEmpty()) null else result.type.messageRes()
+                        isLoadingMore = false,
+                        errorRes = if (hasItems) null else result.messageRes(),
+                        refreshErrorRes = if (hasItems) result.messageRes() else null,
+                        loadMoreErrorRes = null
                     )
                 }
             }
@@ -95,7 +129,7 @@ class InboxViewModel @Inject constructor(
                     )
                 }
                 is ApiResult.Error -> setState {
-                    copy(isLoadingMore = false, loadMoreErrorRes = result.type.messageRes())
+                    copy(isLoadingMore = false, loadMoreErrorRes = result.messageRes())
                 }
             }
         }

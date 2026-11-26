@@ -29,6 +29,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -140,6 +142,20 @@ class ValidationViewModelTest {
         // The in-flight flag is released once the call settles: retrying works again.
         viewModel.onEvent(ValidationEvent.RetryClicked)
         assertEquals(3, repository.validateCalls)
+    }
+
+    @Test
+    fun `retry after a first page failure clears the error and loads rows`() = runTest {
+        val repository = FakeRepository()
+        repository.resultsResult = ApiResult.Error(ApiErrorType.NETWORK)
+        val viewModel = model(repository)
+        assertNotNull(viewModel.uiState.value.errorRes)
+
+        repository.resultsResult = ApiResult.Success(PAGE_RESULT)
+        viewModel.onEvent(ValidationEvent.RetryClicked)
+
+        assertNull(viewModel.uiState.value.errorRes)
+        assertEquals(1, viewModel.uiState.value.rows.size)
     }
 
     private companion object {

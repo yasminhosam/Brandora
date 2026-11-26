@@ -283,7 +283,7 @@ class UploadViewModelTest {
     }
 
     @Test
-    fun unnamedSheetDoesNotMatchAnUnchosenSheet() = runTest {
+    fun unnamedMultiSheetRequiresAnExplicitChoiceBeforeContinuing() = runTest {
         val multi =
             SUCCESS.data.copy(
                 sheetNames = listOf("Products", "المخزون"),
@@ -297,12 +297,21 @@ class UploadViewModelTest {
         model.onEvent(UploadEvent.FilePicked("content://test/book"))
         model.onEvent(UploadEvent.ContinueClicked)
         assertNull(model.uiState.value.chosenSheet)
+        assertFalse(model.uiState.value.canContinue)
         assertTrue(effects.isEmpty())
+
+        // Continue is disabled until a sheet is chosen, so no second analysis can start.
         model.onEvent(UploadEvent.ContinueClicked)
-        // Never-chose (null) must not equal unnamed (null): the analysis runs again and
-        // navigation only follows that result.
-        assertEquals(2, repository.uploads)
-        assertEquals(listOf(UploadEffect.NavigateToMapping("job-1")), effects)
+        assertEquals(1, repository.uploads)
+        assertTrue(effects.isEmpty())
+
+        model.onEvent(UploadEvent.SheetChosen("المخزون"))
+        repository.result =
+            ApiResult.Success(multi.copy(importJobId = "new-job", selectedSheetName = "المخزون"))
+        assertTrue(model.uiState.value.canContinue)
+        model.onEvent(UploadEvent.ContinueClicked)
+        assertEquals(listOf(null, "المخزون"), repository.requestedSheets)
+        assertEquals(listOf(UploadEffect.NavigateToMapping("new-job")), effects)
         collection.cancel()
     }
 

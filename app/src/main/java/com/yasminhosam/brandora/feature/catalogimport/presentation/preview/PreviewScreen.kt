@@ -160,14 +160,6 @@ fun PreviewScreen(
                                 CircularProgressIndicator(Modifier.size(24.dp))
                             }
                         }
-                    } else if (state.hasMore) {
-                        item {
-                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                TextButton(onClick = { onEvent(PreviewEvent.LoadMoreClicked) }) {
-                                    Text(stringResource(R.string.validation_load_more))
-                                }
-                            }
-                        }
                     } else if (state.loadMoreErrorRes != null) {
                         item {
                             Column(
@@ -181,6 +173,14 @@ fun PreviewScreen(
                                 )
                                 TextButton(onClick = { onEvent(PreviewEvent.LoadMoreClicked) }) {
                                     Text(stringResource(R.string.action_retry))
+                                }
+                            }
+                        }
+                    } else if (state.hasMore) {
+                        item {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                TextButton(onClick = { onEvent(PreviewEvent.LoadMoreClicked) }) {
+                                    Text(stringResource(R.string.validation_load_more))
                                 }
                             }
                         }

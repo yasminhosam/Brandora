@@ -83,13 +83,18 @@ class ValidationViewModel @Inject constructor(
     }
 
     private fun loadFirstPage() {
+        // Clear the previous failure before retrying; otherwise a successful reload leaves
+        // errorRes set and the error screen stays on top of the fresh rows.
+        setState { copy(isLoading = true, errorRes = null, loadMoreErrorRes = null) }
         viewModelScope.launch {
             when (val result = getValidationResults(importId, offset = 0)) {
                 is ApiResult.Success -> setState {
                     copy(
                         isLoading = false,
+                        errorRes = null,
                         rows = result.data.rows,
-                        nextOffset = result.data.page.nextOffset
+                        nextOffset = result.data.page.nextOffset,
+                        loadMoreErrorRes = null
                     )
                 }
 

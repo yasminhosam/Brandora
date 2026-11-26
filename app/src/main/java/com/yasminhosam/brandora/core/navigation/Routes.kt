@@ -1,5 +1,7 @@
 package com.yasminhosam.brandora.core.navigation
 
+import java.net.URLEncoder
+
 object Routes {
     // Auth
     const val LOGIN = "login"
@@ -9,7 +11,9 @@ object Routes {
     // token ever appears in navigation.
     const val RESET_PASSWORD = "reset_password?email={email}"
 
-    fun resetPassword(email: String = "") = "reset_password?email=$email"
+    // Encode the value so addresses containing '+', '&' or '#' survive navigation intact.
+    fun resetPassword(email: String = "") =
+        "reset_password?email=${URLEncoder.encode(email, Charsets.UTF_8.name())}"
 
     // Onboarding
     const val BUSINESS_CREATE = "business/create"

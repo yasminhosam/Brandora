@@ -45,7 +45,10 @@ data class UploadUiState(
         get() = file?.sizeBytes
 
     val canContinue: Boolean
-        get() = file != null && fileError == null && !isAnalyzing && !isNavigating
+        get() = file != null && fileError == null && !isAnalyzing && !isNavigating &&
+            // A multi-sheet workbook must not advance until one sheet has been chosen
+            // explicitly (or the backend already named one for us).
+            (analysis == null || analysis.sheetNames.size <= 1 || chosenSheet != null)
 
     /** The VM drops every event while an analysis runs or navigation is committed, so the
      * matching controls must look disabled too instead of swallowing taps silently. */

@@ -99,7 +99,12 @@ constructor(
                             chosenSheet = analysis.selectedSheetName,
                         )
                     }
-                    if (state.analysis != null || analysis.sheetNames.size <= 1) {
+                    // First multi-sheet analysis always shows the chooser, even when the
+                    // backend pre-selected a sheet. A re-analysis may advance only when it
+                    // named a sheet (or collapsed to one); otherwise the chooser stays up.
+                    if (analysis.sheetNames.size <= 1 ||
+                        (current != null && analysis.selectedSheetName != null)
+                    ) {
                         setState { copy(isNavigating = true) }
                         sendEffect(UploadEffect.NavigateToMapping(analysis.importJobId))
                     }

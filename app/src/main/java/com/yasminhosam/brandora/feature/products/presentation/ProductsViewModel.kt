@@ -176,7 +176,13 @@ constructor(
     private suspend fun mutateProduct(business: String, call: suspend (Product) -> ApiResult<*>) {
         val p = uiState.value.selected ?: return
         val result = call(p)
-        if (result is ApiResult.Error) setState { copy(error = result) }
+        if (result is ApiResult.Error) {
+            setState { copy(error = result) }
+        } else {
+            // The write is already committed. If the follow-up read fails, Retry must
+            // refresh instead of sending the same mutation a second time.
+            failedEvent = ProductsEvent.Refresh
+        }
         refreshProduct(business, p.id)
     }
 
@@ -215,7 +221,9 @@ constructor(
                 run(failed) { b ->
                     val p = uiState.value.selected
                     if (p == null) refreshList(b) else refreshProduct(b, p.id)
-                    dispatch(b, failed)
+                    // A refresh failure is retried by refreshing only; re-dispatching it
+                    // would read the same screen twice.
+                    if (failed != ProductsEvent.Refresh) dispatch(b, failed)
                 }
                 return
             }
@@ -299,6 +307,7 @@ constructor(
             is ProductsEvent.SaveVariant -> {
                 val p = uiState.value.selected ?: return
                 use(variants.save(b, p, event.id, event.draft)) {
+                    failedEvent = ProductsEvent.Refresh
                     refreshProduct(b, p.id)
                     sendEffect(ProductsEffect.Saved)
                 }
@@ -326,7 +335,11 @@ constructor(
                 val p = uiState.value.selected ?: return
                 val r = images.upload(b, p.id, event.uris.map { it.toString() }, p.images.size)
                 if (r is ApiResult.Error) setState { copy(error = r) }
-                if (r is ApiResult.Success) setState { copy(cleanupPending = r.data.cleanupPending) }
+                if (r is ApiResult.Success) {
+                    setState { copy(cleanupPending = r.data.cleanupPending) }
+                    // The files are uploaded; a failed refresh must not upload them again.
+                    failedEvent = ProductsEvent.Refresh
+                }
                 refreshProduct(b, p.id)
             }
             is ProductsEvent.Main ->
@@ -336,13 +349,14 @@ constructor(
                 val r = images.reorder(b, p.id, p.images.map { it.id }, event.index, event.to)
                     ?: return
                 if (r is ApiResult.Error) setState { copy(error = r) }
+                if (r is ApiResult.Success) failedEvent = ProductsEvent.Refresh
                 refreshProduct(b, p.id)
             }
             is ProductsEvent.DeleteImage -> {
                 val p = uiState.value.selected ?: return
                 val r = images.delete(b, p.id, event.id)
                 if (r is ApiResult.Error) setState { copy(error = r) }
-                if (r is ApiResult.Success)
+                if (r is ApiResult.Success) {
                     setState {
                         copy(
                             cleanupPending = r.data.cleanupPending,
@@ -351,6 +365,8 @@ constructor(
                                 else pendingImageIds - event.id,
                         )
                     }
+                    failedEvent = ProductsEvent.Refresh
+                }
                 refreshProduct(b, p.id)
             }
             is ProductsEvent.Stock -> {

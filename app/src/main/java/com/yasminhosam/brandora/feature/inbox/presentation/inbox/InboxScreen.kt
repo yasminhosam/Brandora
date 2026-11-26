@@ -38,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.yasminhosam.brandora.R
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
 import com.yasminhosam.brandora.feature.inbox.domain.model.ChatMessage
@@ -64,6 +66,10 @@ fun InboxScreen(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
+    // Returning from Chat must show messages and counters written while the list was stopped.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        onEvent(InboxEvent.ScreenResumed)
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -110,6 +116,26 @@ fun InboxScreen(
                     onClick = { onEvent(InboxEvent.FilterSelected(filter)) },
                     label = { Text(stringResource(filter.labelRes())) }
                 )
+            }
+        }
+
+        state.refreshErrorRes?.let { errorRes ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(scheme.errorContainer)
+                    .padding(start = 16.dp, end = 4.dp)
+            ) {
+                Text(
+                    stringResource(errorRes),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onErrorContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(onClick = { onEvent(InboxEvent.RefreshRequested) }) {
+                    Text(stringResource(R.string.action_retry))
+                }
             }
         }
 

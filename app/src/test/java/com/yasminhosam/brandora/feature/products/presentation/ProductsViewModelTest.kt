@@ -39,6 +39,7 @@ class ProductsViewModelTest {
         var getGate: CompletableDeferred<Product>? = null
         var saveGate: CompletableDeferred<Product>? = null
         var saveError: ApiResult.Error? = null
+        var getError: ApiResult.Error? = null
         var pages = mapOf<Int, Page<Product>>()
         var categoryItems: List<Category> = emptyList()
 
@@ -59,6 +60,10 @@ class ProductsViewModelTest {
 
         override suspend fun get(business: String, id: String): ApiResult<Product> {
             calls += "get:" + business + ":" + id
+            getError?.let {
+                getError = null
+                return it
+            }
             val wait = getGate
             if (wait != null) return ApiResult.Success(wait.await())
             return ApiResult.Success(product(business).copy(id = id))
@@ -139,7 +144,10 @@ class ProductsViewModelTest {
             business: String,
             product: String,
             image: String,
-        ): ApiResult<Images> = unused()
+        ): ApiResult<Images> {
+            calls += "main:$business:$product:$image"
+            return ApiResult.Success(Images(emptyList()))
+        }
 
         override suspend fun order(
             business: String,
@@ -292,6 +300,27 @@ class ProductsViewModelTest {
             // The latch is cleared by the successful retry: Retry alone is a no-op now.
             v.onEvent(ProductsEvent.Retry)
             assertEquals(2, f.calls.count { it == "save:b" })
+        }
+
+    @Test
+    fun `retry after a committed mutation only refreshes when the follow-up read failed`() =
+        runTest(scheduler) {
+            val f = Fake()
+            val v = vm(f, Business("b"))
+            v.onEvent(ProductsEvent.Open("p-b"))
+            assertEquals("p-b", v.uiState.value.selected?.id)
+
+            // The image is already set; only the product reload that follows it fails.
+            f.getError = ApiResult.Error(ApiErrorType.TIMEOUT)
+            v.onEvent(ProductsEvent.Main("img1"))
+            assertEquals(1, f.calls.count { it == "main:b:p-b:img1" })
+            assertNotNull(v.uiState.value.error)
+
+            // Retry must read the product again without re-sending the committed PATCH.
+            v.onEvent(ProductsEvent.Retry)
+            assertEquals(1, f.calls.count { it == "main:b:p-b:img1" })
+            assertEquals(3, f.calls.count { it == "get:b:p-b" })
+            assertNull(v.uiState.value.error)
         }
 
     @Test
