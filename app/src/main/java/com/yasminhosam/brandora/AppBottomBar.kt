@@ -11,7 +11,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination
@@ -32,6 +35,15 @@ private val tabs = listOf(
 /** The bar is visible only when the current screen is one of the tabs. */
 fun NavDestination?.isTopLevel(): Boolean =
     this?.hierarchy?.any { destination -> tabs.any { it.route == destination.route } } == true
+
+private val DefaultBottomBarVisible = mutableStateOf(true)
+
+/**
+ * Whether a top-level tab currently shows the bar. Detail, inventory and both editors are
+ * compose state inside the single products destination, so [isTopLevel] cannot see them —
+ * ProductsRoute writes this and BrandoraRoot reads it. Reset to true when leaving products.
+ */
+val LocalBottomBarVisible = staticCompositionLocalOf { DefaultBottomBarVisible }
 
 @Composable
 fun AppBottomBar(nav: NavHostController) {
