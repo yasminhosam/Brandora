@@ -2,6 +2,9 @@ package com.yasminhosam.brandora.feature.business.presentation
 
 import com.yasminhosam.brandora.core.network.ApiErrorType
 import com.yasminhosam.brandora.core.network.ApiResult
+import com.yasminhosam.brandora.feature.auth.domain.model.AuthSession
+import com.yasminhosam.brandora.feature.auth.domain.model.AuthUser
+import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
 import com.yasminhosam.brandora.feature.business.domain.model.BusinessNameError
 import com.yasminhosam.brandora.feature.business.domain.model.BusinessProfile
 import com.yasminhosam.brandora.feature.business.domain.model.NewBusiness
@@ -12,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -53,10 +57,25 @@ class BusinessViewModelTest {
         var savedId: String? = null
             private set
 
-        override suspend fun setBusinessId(id: String) {
+        var savedOwner: String? = null
+            private set
+
+        override suspend fun setBusinessId(id: String, ownerId: String?) {
             savedId = id
+            savedOwner = ownerId
             _businessId.value = id
         }
+
+        override suspend fun clearUnlessOwnedBy(userId: String) = error("not under test")
+    }
+
+    private class FakeSessionStore : SessionStore {
+        override val session: StateFlow<AuthSession?> =
+            MutableStateFlow(AuthSession(AuthUser(id = "u1"), "a", "r"))
+
+        override suspend fun save(session: AuthSession) = error("not under test")
+
+        override suspend fun clear() = error("not under test")
     }
 
     @Before
@@ -71,10 +90,12 @@ class BusinessViewModelTest {
 
     private fun viewModel(
         repository: FakeRepository = FakeRepository(SUCCESS),
-        store: FakeStore = FakeStore()
+        store: FakeStore = FakeStore(),
+        sessionStore: SessionStore = FakeSessionStore()
     ) = BusinessViewModel(
         createBusiness = CreateBusinessUseCase(repository),
-        currentBusinessStore = store
+        currentBusinessStore = store,
+        sessionStore = sessionStore
     )
 
     @Test
@@ -113,6 +134,7 @@ class BusinessViewModelTest {
         viewModel.onEvent(BusinessEvent.CreateClicked)
 
         assertEquals(PROFILE.id, store.savedId)
+        assertEquals("u1", store.savedOwner)
         assertEquals(listOf<BusinessEffect>(BusinessEffect.BusinessCreated), effects)
         assertFalse(viewModel.uiState.value.isCreating)
         collection.cancel()

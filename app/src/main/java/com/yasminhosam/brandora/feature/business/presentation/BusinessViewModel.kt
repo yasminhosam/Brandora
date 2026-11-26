@@ -3,6 +3,7 @@ package com.yasminhosam.brandora.feature.business.presentation
 import androidx.lifecycle.viewModelScope
 import com.yasminhosam.brandora.core.base.BaseViewModel
 import com.yasminhosam.brandora.core.network.ApiResult
+import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
 import com.yasminhosam.brandora.feature.business.domain.model.BusinessRules
 import com.yasminhosam.brandora.feature.business.domain.model.NewBusiness
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
@@ -14,7 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class BusinessViewModel @Inject constructor(
     private val createBusiness: CreateBusinessUseCase,
-    private val currentBusinessStore: CurrentBusinessStore
+    private val currentBusinessStore: CurrentBusinessStore,
+    private val sessionStore: SessionStore
 ) : BaseViewModel<BusinessUiState, BusinessEvent, BusinessEffect>(BusinessUiState()) {
 
     override fun onEvent(event: BusinessEvent) {
@@ -56,8 +58,12 @@ class BusinessViewModel @Inject constructor(
             )
             when (val result = createBusiness(input)) {
                 is ApiResult.Success -> {
-                    // Persisting here (not in the screen) keeps the id durable before navigation.
-                    currentBusinessStore.setBusinessId(result.data.id)
+                    // Persisting here (not in the screen) keeps the id durable before navigation,
+                    // tagged with the creating user so no later login inherits another's business.
+                    currentBusinessStore.setBusinessId(
+                        result.data.id,
+                        sessionStore.session.value?.user?.id,
+                    )
                     setState { copy(isCreating = false) }
                     sendEffect(BusinessEffect.BusinessCreated)
                 }

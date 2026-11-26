@@ -22,11 +22,27 @@ class DataStoreCurrentBusinessStore @Inject constructor(
     override val businessId: Flow<String?> = context.businessDataStore.data
         .map { it[KEY_BUSINESS_ID] }
 
-    override suspend fun setBusinessId(id: String) {
-        context.businessDataStore.edit { it[KEY_BUSINESS_ID] = id }
+    override suspend fun setBusinessId(id: String, ownerId: String?) {
+        context.businessDataStore.edit {
+            it[KEY_BUSINESS_ID] = id
+            if (ownerId != null) it[KEY_BUSINESS_OWNER_ID] = ownerId
+            else it.remove(KEY_BUSINESS_OWNER_ID)
+        }
+    }
+
+    override suspend fun clearUnlessOwnedBy(userId: String) {
+        context.businessDataStore.edit { prefs ->
+            // No business, or one created by someone else (a legacy entry with no recorded
+            // owner counts as someone else's): drop it so no account inherits another's.
+            if (prefs[KEY_BUSINESS_ID] != null && prefs[KEY_BUSINESS_OWNER_ID] != userId) {
+                prefs.remove(KEY_BUSINESS_ID)
+                prefs.remove(KEY_BUSINESS_OWNER_ID)
+            }
+        }
     }
 
     private companion object {
         val KEY_BUSINESS_ID = stringPreferencesKey("business_id")
+        val KEY_BUSINESS_OWNER_ID = stringPreferencesKey("business_owner_id")
     }
 }
