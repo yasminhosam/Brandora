@@ -8,7 +8,6 @@ import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.feature.inbox.FakeInboxRepository
 import com.yasminhosam.brandora.feature.inbox.domain.model.ChatRules
 import com.yasminhosam.brandora.feature.inbox.domain.model.PagedList
-import com.yasminhosam.brandora.feature.inbox.domain.model.SenderType
 import com.yasminhosam.brandora.feature.inbox.domain.usecase.GetConversationUseCase
 import com.yasminhosam.brandora.feature.inbox.domain.usecase.GetMessagesUseCase
 import com.yasminhosam.brandora.feature.inbox.domain.usecase.SendMessageUseCase

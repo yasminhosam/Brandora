@@ -24,7 +24,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -34,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -69,14 +70,18 @@ fun ChatScreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     Column(
-        // Edge-to-edge: safeDrawing keeps the header under the status bar clear and lifts the
-        // composer above the keyboard as well as the navigation bar.
+        // Edge-to-edge: safeDrawing keeps the header clear of the status bar and the
+        // bottom bar clear of the navigation bar.
         modifier = modifier
             .fillMaxSize()
             .background(scheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         ChatHeader(state.conversation, onBackClick) { onEvent(ChatEvent.HeaderClicked) }
+
+        if (state.conversation?.needsOwnerReply == true) {
+            HandoffBanner()
+        }
 
         Box(Modifier.weight(1f)) {
             when {
@@ -114,47 +119,69 @@ fun ChatScreen(
 @Composable
 private fun ChatHeader(conversation: Conversation?, onBackClick: () -> Unit, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(scheme.primary, RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-            .padding(horizontal = 8.dp, vertical = 12.dp)
+    Surface(
+        color = scheme.primary,
+        shadowElevation = 4.dp,
+        shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.chat_back),
-                tint = scheme.onPrimary
-            )
-        }
-        if (conversation != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onClick)
-            ) {
-                CustomerAvatar(conversation.customer, size = 40.dp)
-                Column(Modifier.padding(start = 12.dp)) {
-                    Text(
-                        conversation.customer.displayTitle(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = scheme.onPrimary,
-                        maxLines = 1
-                    )
-                    if (conversation.customer.name != null && conversation.customer.phone.isNotBlank()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 14.dp)
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.chat_back),
+                    tint = scheme.onPrimary
+                )
+            }
+            if (conversation != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onClick)
+                ) {
+                    CustomerAvatar(conversation.customer, size = 44.dp)
+                    Column(Modifier.padding(start = 12.dp)) {
                         Text(
-                            conversation.customer.displayPhone,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onPrimary.copy(alpha = 0.85f)
+                            conversation.customer.displayTitle(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = scheme.onPrimary,
+                            maxLines = 1
                         )
+                        if (conversation.customer.name != null && conversation.customer.phone.isNotBlank()) {
+                            Text(
+                                conversation.customer.displayPhone,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onPrimary.copy(alpha = 0.85f)
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/** Soft warning strip shown when the AI handed the chat over to the owner. */
+@Composable
+private fun HandoffBanner() {
+    val scheme = MaterialTheme.colorScheme
+    Text(
+        stringResource(R.string.chat_customer_handoff),
+        style = MaterialTheme.typography.labelLarge,
+        color = scheme.onErrorContainer,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .background(scheme.errorContainer, RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    )
 }
 
 /**
@@ -191,8 +218,6 @@ private fun Composer(state: ChatUiState, onEvent: (ChatEvent) -> Unit) {
                 value = state.draft,
                 onValueChange = { onEvent(ChatEvent.ReplyChanged(it)) },
                 modifier = Modifier.weight(1f),
-                // Stays enabled while a send is in flight, so the keyboard does not close on
-                // every message; Send itself is disabled by state.canSend.
                 placeholder = { Text(stringResource(R.string.chat_reply_hint)) },
                 maxLines = 4,
                 isError = state.draftTooLong,
@@ -240,6 +265,7 @@ private fun MessageList(state: ChatUiState, onEvent: (ChatEvent) -> Unit) {
                 Text(
                     stringResource(R.string.chat_empty),
                     color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(24.dp)
                 )
             }
@@ -265,9 +291,9 @@ private fun MessageList(state: ChatUiState, onEvent: (ChatEvent) -> Unit) {
                 val older = state.messages.getOrNull(index + 1)
                 val at = message.createdAt
                 val startsDay = at != null && (
-                    (older?.createdAt != null && !ChatTimeFormatter.isSameDay(at, older.createdAt, zone)) ||
-                        (older == null && !state.hasOlder)
-                    )
+                        (older?.createdAt != null && !ChatTimeFormatter.isSameDay(at, older.createdAt, zone)) ||
+                                (older == null && !state.hasOlder)
+                        )
                 if (startsDay && at != null) {
                     DaySeparator(ChatTimeFormatter.daySeparator(at, now, zone, locale).asText())
                 }
@@ -301,7 +327,7 @@ private fun DaySeparator(text: String) {
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -309,8 +335,8 @@ private fun DaySeparator(text: String) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 5.dp)
         )
     }
 }
@@ -325,87 +351,101 @@ private fun MessageBubble(
     val scheme = MaterialTheme.colorScheme
     val fromCustomer = message.sender == SenderType.CUSTOMER || message.sender == SenderType.UNKNOWN
     val container = when (message.sender) {
-        SenderType.CUSTOMER, SenderType.UNKNOWN -> scheme.surfaceVariant
+        SenderType.CUSTOMER, SenderType.UNKNOWN -> scheme.surface
         SenderType.OWNER -> scheme.primary
-        SenderType.AI -> scheme.secondaryContainer
+        SenderType.AI -> scheme.primaryContainer
     }
     val content = when (message.sender) {
-        SenderType.CUSTOMER, SenderType.UNKNOWN -> scheme.onSurfaceVariant
+        SenderType.CUSTOMER, SenderType.UNKNOWN -> scheme.onSurface
         SenderType.OWNER -> scheme.onPrimary
-        SenderType.AI -> scheme.onSecondaryContainer
+        SenderType.AI -> scheme.onPrimaryContainer
+    }
+    // The small corner sits on the sender's side, like a chat tail.
+    val shape = if (fromCustomer) {
+        RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
+    } else {
+        RoundedCornerShape(topStart = 18.dp, topEnd = 4.dp, bottomEnd = 18.dp, bottomStart = 18.dp)
     }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (fromCustomer) Arrangement.Start else Arrangement.End
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 300.dp)
-                .background(container, RoundedCornerShape(16.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+        Surface(
+            color = container,
+            shape = shape,
+            shadowElevation = if (fromCustomer) 1.dp else 0.dp,
+            modifier = Modifier.widthIn(max = 300.dp)
         ) {
-            if (message.sender == SenderType.AI) {
-                Text(
-                    stringResource(R.string.chat_sender_ai),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = content
-                )
-            }
-            if (message.hasText) {
-                Text(message.content.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = content)
-            } else {
-                Text(
-                    stringResource(
-                        if (message.type == MessageType.TEXT) R.string.message_kind_other
-                        else R.string.chat_media_unavailable
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                    color = content
-                )
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.align(Alignment.End)
-            ) {
-                when {
-                    message.status == DeliveryStatus.FAILED -> {
-                        Text(
-                            stringResource(R.string.chat_failed),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = scheme.error
-                        )
-                        // A retry is a new message: the backend never resends a FAILED row.
-                        if (message.sender == SenderType.OWNER && message.hasText) {
-                            TextButton(
-                                onClick = { onRetry(message.content.orEmpty()) },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                            ) {
-                                Text(
-                                    stringResource(R.string.chat_retry),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.error
-                                )
-                            }
-                        }
-                        Spacer(Modifier.size(6.dp))
-                    }
-                    message.status == DeliveryStatus.PENDING && !fromCustomer -> {
-                        Text(
-                            stringResource(R.string.chat_pending),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = content.copy(alpha = 0.7f)
-                        )
-                        Spacer(Modifier.size(6.dp))
-                    }
-                }
-                message.createdAt?.let {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 9.dp)) {
+                if (message.sender == SenderType.AI) {
                     Text(
-                        ChatTimeFormatter.clockTime(it, zone, locale),
+                        stringResource(R.string.chat_sender_ai),
                         style = MaterialTheme.typography.labelSmall,
-                        color = content.copy(alpha = 0.7f)
+                        fontWeight = FontWeight.Bold,
+                        color = scheme.primary
                     )
+                    Spacer(Modifier.size(2.dp))
+                }
+                if (message.hasText) {
+                    Text(
+                        message.content.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = content
+                    )
+                } else {
+                    Text(
+                        stringResource(
+                            if (message.type == MessageType.TEXT) R.string.message_kind_other
+                            else R.string.chat_media_unavailable
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontStyle = FontStyle.Italic,
+                        color = content.copy(alpha = 0.8f)
+                    )
+                }
+                Spacer(Modifier.size(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    when {
+                        message.status == DeliveryStatus.FAILED -> {
+                            Text(
+                                stringResource(R.string.chat_failed),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (fromCustomer) scheme.error else scheme.errorContainer
+                            )
+                            // A retry is a new message: the backend never resends a FAILED row.
+                            if (message.sender == SenderType.OWNER && message.hasText) {
+                                TextButton(
+                                    onClick = { onRetry(message.content.orEmpty()) },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.chat_retry),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = scheme.error
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.size(6.dp))
+                        }
+                        message.status == DeliveryStatus.PENDING && !fromCustomer -> {
+                            Text(
+                                stringResource(R.string.chat_pending),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = content.copy(alpha = 0.7f)
+                            )
+                            Spacer(Modifier.size(6.dp))
+                        }
+                    }
+                    message.createdAt?.let {
+                        Text(
+                            ChatTimeFormatter.clockTime(it, zone, locale),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = content.copy(alpha = 0.65f)
+                        )
+                    }
                 }
             }
         }
@@ -443,7 +483,10 @@ private fun CustomerSheet(state: ChatUiState, onEvent: (ChatEvent) -> Unit) {
             // The AI switch is a real PATCH: turning it off hands the chat to the owner.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -487,8 +530,9 @@ private fun CustomerSheet(state: ChatUiState, onEvent: (ChatEvent) -> Unit) {
                 )
             }
             Spacer(Modifier.size(16.dp))
-            Button(
+            androidx.compose.material3.Button(
                 onClick = { onEvent(ChatEvent.OpenWhatsAppClicked) },
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.chat_open_whatsapp))

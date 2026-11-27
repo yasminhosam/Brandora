@@ -44,7 +44,7 @@ internal fun ConversationDto.toDomain() = Conversation(
     id = id,
     customer = (customer ?: ConversationCustomerDto(id = customerId.orEmpty())).toDomain(),
     status = ConversationStatus.from(status),
-    aiEnabled = aiEnabled,
+    aiEnabled = aiEnabled ?: true,
     handoffReason = handoffReason?.takeIf { it.isNotBlank() },
     lastMessageAt = lastMessageAt.toInstantOrNull(),
     lastMessage = lastMessage?.toDomain()

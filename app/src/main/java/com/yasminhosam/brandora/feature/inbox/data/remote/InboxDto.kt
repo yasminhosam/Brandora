@@ -33,7 +33,7 @@ internal data class ConversationDto(
     val customerId: String? = null,
     val channel: String? = null,
     val status: String? = null,
-    val aiEnabled: Boolean = true,
+    val aiEnabled: Boolean? = null,
     val handoffReason: String? = null,
     val lastMessageAt: String? = null,
     val lastCustomerMessageAt: String? = null,
