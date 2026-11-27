@@ -140,7 +140,7 @@ class ProductImageFiles @Inject constructor(@ApplicationContext private val cont
 
     private companion object {
         const val MAX_DIMENSION = 2048
-        const val MAX_OUTPUT_BYTES = 4 * 1024 * 1024 // stay safely under the backend's 5 MB guard
+        const val MAX_OUTPUT_BYTES = 9 * 1024 * 1024 // stay safely under the backend's 10 MB guard
         val QUALITY_STEPS = intArrayOf(85, 75, 65, 55)
     }
 }

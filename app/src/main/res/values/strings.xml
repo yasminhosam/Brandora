@@ -273,7 +273,7 @@
     <string name="pm_cancel">Cancel</string>
     <string name="pm_external_conflict">This import code already belongs to another product in this business.</string>
     <string name="pm_options_in_use">Existing variants use these options. Keep their current choices when editing definitions.</string>
-    <string name="pm_image_invalid">Select JPEG, PNG or WebP files up to 5 MB each, within the available five image slots. The whole batch must fit.</string>
+    <string name="pm_image_invalid">Select JPEG, PNG or WebP files up to 10 MB each, within the available five image slots. The whole batch must fit.</string>
     <string name="pm_image_unavailable">Image storage is unavailable. Refresh before retrying; an earlier operation may have completed.</string>
     <string name="pm_write_conflict">Another change is in progress. Refresh the product before trying again.</string>
     <string name="pm_variant_sku_conflict">This SKU already belongs to another variant in this business.</string>

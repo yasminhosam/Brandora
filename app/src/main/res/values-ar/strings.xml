@@ -272,7 +272,7 @@
     <string name="pm_cancel">إلغاء</string>
     <string name="pm_external_conflict">كود الاستيراد مستخدم لمنتج آخر في هذا النشاط.</string>
     <string name="pm_options_in_use">متغيرات موجودة تستخدم هذه الخيارات. احتفظ باختياراتها عند تعديل التعريفات.</string>
-    <string name="pm_image_invalid">اختر صور JPEG أو PNG أو WebP حتى 5 ميجابايت للصورة، ضمن حد 5 صور للمنتج. يجب أن تتسع الخانات للمجموعة كاملة.</string>
+    <string name="pm_image_invalid">اختر صور JPEG أو PNG أو WebP حتى 10 ميجابايت للصورة، ضمن حد 5 صور للمنتج. يجب أن تتسع الخانات للمجموعة كاملة.</string>
     <string name="pm_image_unavailable">تخزين الصور غير متاح. حدّث قبل المحاولة مجددًا فقد تكون العملية السابقة اكتملت.</string>
     <string name="pm_write_conflict">يوجد تعديل آخر. حدّث المنتج قبل المحاولة مجددًا.</string>
     <string name="pm_variant_sku_conflict">رمز SKU هذا مخصّص لتشكيلة أخرى في هذا النشاط.</string>
