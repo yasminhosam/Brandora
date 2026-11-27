@@ -25,19 +25,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableIntStateOf
 import com.yasminhosam.brandora.app.AppNavHost
 import com.yasminhosam.brandora.core.navigation.Routes
 import com.yasminhosam.brandora.core.navigation.clearTo
+import com.yasminhosam.brandora.core.network.ApiResult
 import com.yasminhosam.brandora.core.network.SessionExpiredSignal
+import com.yasminhosam.brandora.core.ui.messageRes
 import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
-import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
+import com.yasminhosam.brandora.feature.business.domain.usecase.BusinessSyncResult
+import com.yasminhosam.brandora.feature.business.domain.usecase.ReconcileBusinessUseCase
 import kotlinx.coroutines.flow.first
 
 @Composable
 fun BrandoraRoot(
-    currentBusinessStore: CurrentBusinessStore,
+    reconcileBusiness: ReconcileBusinessUseCase,
     sessionStore: SessionStore,
     sessionExpiredSignal: SessionExpiredSignal,
 ) {
@@ -47,15 +60,25 @@ fun BrandoraRoot(
     val sessionExpiredMessage = stringResource(R.string.session_expired)
 
     // Wait for the first real values before choosing the start screen: no session means
-    // Login; with a session the existing business gate decides Home vs Business Create.
+    // Login; with a session reconcileBusiness decides Home vs Business Create.
     var startDestination by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
-        startDestination =
-            when {
-                sessionStore.session.first() == null -> Routes.LOGIN
-                currentBusinessStore.businessId.first() == null -> Routes.BUSINESS_CREATE
-                else -> Routes.HOME
+    var startupError by remember { mutableStateOf<ApiResult.Error?>(null) }
+    var retryCount by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(retryCount) {
+        val session = sessionStore.session.first()
+        if (session == null) {
+            startDestination = Routes.LOGIN
+        } else {
+            startupError = null
+            when (val sync = reconcileBusiness(session.user.id)) {
+                BusinessSyncResult.HasBusiness -> startDestination = Routes.HOME
+                BusinessSyncResult.NoBusiness -> startDestination = Routes.BUSINESS_CREATE
+                is BusinessSyncResult.Error -> {
+                    startupError = sync.error
+                }
             }
+        }
     }
 
     // Session expiry (refresh rejected or its response lost) lands on Login from anywhere,
@@ -93,7 +116,30 @@ fun BrandoraRoot(
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
-                ) {}
+                ) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val error = startupError
+                        if (error != null) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(24.dp),
+                            ) {
+                                Text(
+                                    stringResource(error.type.messageRes()),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Button(onClick = { retryCount++ }) {
+                                    Text(stringResource(R.string.action_retry))
+                                }
+                            }
+                        } else {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
             } else {
                 AppNavHost(
                     nav = nav,

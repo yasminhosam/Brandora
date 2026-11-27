@@ -7,13 +7,13 @@ import androidx.activity.enableEdgeToEdge
 import com.yasminhosam.brandora.core.network.SessionExpiredSignal
 import com.yasminhosam.brandora.core.ui.theme.BrandoraTheme
 import com.yasminhosam.brandora.feature.auth.domain.repository.SessionStore
-import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
+import com.yasminhosam.brandora.feature.business.domain.usecase.ReconcileBusinessUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    @Inject lateinit var currentBusinessStore: CurrentBusinessStore
+    @Inject lateinit var reconcileBusiness: ReconcileBusinessUseCase
     @Inject lateinit var sessionStore: SessionStore
     @Inject lateinit var sessionExpiredSignal: SessionExpiredSignal
 
@@ -23,7 +23,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BrandoraTheme {
                 BrandoraRoot(
-                    currentBusinessStore = currentBusinessStore,
+                    reconcileBusiness = reconcileBusiness,
                     sessionStore = sessionStore,
                     sessionExpiredSignal = sessionExpiredSignal,
                 )
