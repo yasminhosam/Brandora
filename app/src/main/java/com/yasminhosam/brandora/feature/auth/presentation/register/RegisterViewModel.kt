@@ -15,22 +15,20 @@ import com.yasminhosam.brandora.feature.auth.domain.validation.validateEmail
 import com.yasminhosam.brandora.feature.auth.domain.validation.validateRegisterPassword
 import com.yasminhosam.brandora.feature.auth.presentation.AuthCooldownTicker
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
+import com.yasminhosam.brandora.feature.business.domain.usecase.BusinessSyncResult
+import com.yasminhosam.brandora.feature.business.domain.usecase.ReconcileBusinessUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Register: email + password -> /auth/register (201). Mirrors LoginViewModel: local domain
- * validation (12-128 chars with an upper/lower/digit) runs before any request, 409
- * EMAIL_UNAVAILABLE lands on the email field, 429/503 disables submit during the cooldown,
- * and the password is dropped from state on success. The repository persists the session,
- * so the landing route reuses the same business gate as login.
+ * Register: email + password -> /auth/register (201).
  */
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val register: RegisterUseCase,
-    private val currentBusinessStore: CurrentBusinessStore
+    private val currentBusinessStore: CurrentBusinessStore,
+    private val reconcileBusiness: ReconcileBusinessUseCase
 ) : BaseViewModel<RegisterUiState, RegisterEvent, RegisterEffect>(RegisterUiState()) {
 
     private val cooldownTicker =
@@ -86,20 +84,21 @@ class RegisterViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = register(email, state.password)) {
                 is ApiResult.Success -> {
-                    // Persisting happened in the repository; only the landing screen is
-                    // chosen here, exactly like BrandoraRoot's startup choice.
-                    // A brand-new account never inherits a business stored by someone else.
-                    currentBusinessStore.clearUnlessOwnedBy(result.data.user.id)
-                    val nextRoute =
-                        if (currentBusinessStore.businessId.first() == null) {
-                            Routes.BUSINESS_CREATE
-                        } else {
-                            Routes.HOME
+                    val userId = result.data.user.id
+                    currentBusinessStore.clearUnlessOwnedBy(userId)
+                    when (val sync = reconcileBusiness(userId)) {
+                        BusinessSyncResult.HasBusiness -> {
+                            setState { copy(isSubmitting = false, password = "") }
+                            sendEffect(RegisterEffect.RegisterSucceeded(Routes.HOME))
                         }
-                    // The password lived only in memory: drop it as soon as the request
-                    // no longer needs it.
-                    setState { copy(isSubmitting = false, password = "") }
-                    sendEffect(RegisterEffect.RegisterSucceeded(nextRoute))
+                        BusinessSyncResult.NoBusiness -> {
+                            setState { copy(isSubmitting = false, password = "") }
+                            sendEffect(RegisterEffect.RegisterSucceeded(Routes.BUSINESS_CREATE))
+                        }
+                        is BusinessSyncResult.Error -> {
+                            setState { copy(isSubmitting = false, password = "", submitError = sync.error.type) }
+                        }
+                    }
                 }
                 is ApiResult.Error -> onRegisterError(result)
             }

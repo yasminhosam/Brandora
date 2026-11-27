@@ -14,7 +14,11 @@ import com.yasminhosam.brandora.feature.auth.domain.usecase.LoginUseCase
 import com.yasminhosam.brandora.feature.auth.domain.validation.AuthEmailError
 import com.yasminhosam.brandora.feature.auth.domain.validation.AuthPasswordError
 import com.yasminhosam.brandora.feature.auth.domain.validation.PASSWORD_MAX_LENGTH
+import com.yasminhosam.brandora.feature.business.domain.model.BusinessProfile
+import com.yasminhosam.brandora.feature.business.domain.model.NewBusiness
+import com.yasminhosam.brandora.feature.business.domain.repository.BusinessRepository
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
+import com.yasminhosam.brandora.feature.business.domain.usecase.ReconcileBusinessUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -85,11 +89,23 @@ class LoginViewModelTest {
         private val _businessId = MutableStateFlow(id)
         override val businessId: Flow<String?> = _businessId
 
-        override suspend fun setBusinessId(id: String, ownerId: String?) = error("not under test")
+        override suspend fun setBusinessId(id: String, ownerId: String?) {
+            _businessId.value = id
+        }
 
         override suspend fun clearUnlessOwnedBy(userId: String) {
             if (_businessId.value != null && owner != userId) _businessId.value = null
         }
+    }
+
+    private class FakeBusinessRepository(
+        private val result: ApiResult<List<BusinessProfile>>
+    ) : BusinessRepository {
+        override suspend fun createBusiness(input: NewBusiness): ApiResult<BusinessProfile> =
+            error("not under test")
+
+        override suspend fun getBusinesses(limit: Int, offset: Int): ApiResult<List<BusinessProfile>> =
+            result
     }
 
     @Before
@@ -106,11 +122,19 @@ class LoginViewModelTest {
         repository: FakeAuthRepository = FakeAuthRepository(SUCCESS),
         businessId: String? = "biz-1",
         owner: String? = "u1",
-    ) =
-        LoginViewModel(
-            login = LoginUseCase(repository),
-            currentBusinessStore = FakeBusinessStore(businessId, owner),
+        serverResult: ApiResult<List<BusinessProfile>> = ApiResult.Success(
+            if (businessId != null && owner == "u1") listOf(BusinessProfile("biz-1", "Biz"))
+            else emptyList()
         )
+    ): LoginViewModel {
+        val store = FakeBusinessStore(businessId, owner)
+        val businessRepo = FakeBusinessRepository(serverResult)
+        return LoginViewModel(
+            login = LoginUseCase(repository),
+            currentBusinessStore = store,
+            reconcileBusiness = ReconcileBusinessUseCase(businessRepo, store),
+        )
+    }
 
     private fun LoginViewModel.submit(email: String, password: String) {
         onEvent(LoginEvent.EmailChanged(email))
@@ -170,6 +194,28 @@ class LoginViewModelTest {
                 listOf<LoginEffect>(LoginEffect.LoginSucceeded(Routes.BUSINESS_CREATE)),
                 effects,
             )
+            collection.cancel()
+        }
+
+    @Test
+    fun `login error during business reconciliation shows error and does not navigate to Business Create`() =
+        runTest(scheduler) {
+            val repository = FakeAuthRepository(SUCCESS)
+            val viewModel = viewModel(
+                repository = repository,
+                businessId = null,
+                serverResult = ApiResult.Error(ApiErrorType.NETWORK),
+            )
+            val effects = mutableListOf<LoginEffect>()
+            val collection = launch(mainDispatcher) { viewModel.effects.collect { effects += it } }
+
+            viewModel.onEvent(LoginEvent.EmailChanged("a@b.c"))
+            viewModel.onEvent(LoginEvent.PasswordChanged("secret"))
+            viewModel.onEvent(LoginEvent.SubmitClicked)
+
+            assertTrue(effects.isEmpty())
+            assertEquals(ApiErrorType.NETWORK, viewModel.uiState.value.submitError)
+            assertFalse(viewModel.uiState.value.isSubmitting)
             collection.cancel()
         }
 

@@ -13,7 +13,11 @@ import com.yasminhosam.brandora.feature.auth.domain.repository.AuthRepository
 import com.yasminhosam.brandora.feature.auth.domain.usecase.RegisterUseCase
 import com.yasminhosam.brandora.feature.auth.domain.validation.AuthEmailError
 import com.yasminhosam.brandora.feature.auth.domain.validation.AuthPasswordError
+import com.yasminhosam.brandora.feature.business.domain.model.BusinessProfile
+import com.yasminhosam.brandora.feature.business.domain.model.NewBusiness
+import com.yasminhosam.brandora.feature.business.domain.repository.BusinessRepository
 import com.yasminhosam.brandora.feature.business.domain.repository.CurrentBusinessStore
+import com.yasminhosam.brandora.feature.business.domain.usecase.ReconcileBusinessUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -84,11 +88,23 @@ class RegisterViewModelTest {
         private val _businessId = MutableStateFlow(id)
         override val businessId: Flow<String?> = _businessId
 
-        override suspend fun setBusinessId(id: String, ownerId: String?) = error("not under test")
+        override suspend fun setBusinessId(id: String, ownerId: String?) {
+            _businessId.value = id
+        }
 
         override suspend fun clearUnlessOwnedBy(userId: String) {
             if (_businessId.value != null && owner != userId) _businessId.value = null
         }
+    }
+
+    private class FakeBusinessRepository(
+        private val result: ApiResult<List<BusinessProfile>>
+    ) : BusinessRepository {
+        override suspend fun createBusiness(input: NewBusiness): ApiResult<BusinessProfile> =
+            error("not under test")
+
+        override suspend fun getBusinesses(limit: Int, offset: Int): ApiResult<List<BusinessProfile>> =
+            result
     }
 
     @Before
@@ -105,10 +121,18 @@ class RegisterViewModelTest {
         repository: FakeAuthRepository = FakeAuthRepository(SUCCESS),
         businessId: String? = null,
         owner: String? = "u1",
+        serverResult: ApiResult<List<BusinessProfile>> = ApiResult.Success(
+            if (businessId != null && owner == "u1") listOf(BusinessProfile("biz-1", "Biz"))
+            else emptyList()
+        )
     ) =
         RegisterViewModel(
             register = RegisterUseCase(repository),
             currentBusinessStore = FakeBusinessStore(businessId, owner),
+            reconcileBusiness = ReconcileBusinessUseCase(
+                FakeBusinessRepository(serverResult),
+                FakeBusinessStore(businessId, owner)
+            )
         )
 
     private fun RegisterViewModel.submit(email: String, password: String) {
