@@ -28,6 +28,9 @@ class CreateBusinessUseCaseTest {
             lastInput = input
             return response
         }
+
+        override suspend fun getBusinesses(limit: Int, offset: Int): ApiResult<List<BusinessProfile>> =
+            error("not under test")
     }
 
     @Test

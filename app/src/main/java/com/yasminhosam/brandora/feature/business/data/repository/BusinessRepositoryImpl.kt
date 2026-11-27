@@ -13,4 +13,7 @@ class BusinessRepositoryImpl @Inject constructor(
 
     override suspend fun createBusiness(input: NewBusiness): ApiResult<BusinessProfile> =
         remote.createBusiness(input)
+
+    override suspend fun getBusinesses(limit: Int, offset: Int): ApiResult<List<BusinessProfile>> =
+        remote.getBusinesses(limit, offset)
 }

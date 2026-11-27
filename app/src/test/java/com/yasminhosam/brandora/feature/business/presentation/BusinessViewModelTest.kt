@@ -48,6 +48,9 @@ class BusinessViewModelTest {
             lastInput = input
             return result
         }
+
+        override suspend fun getBusinesses(limit: Int, offset: Int): ApiResult<List<BusinessProfile>> =
+            error("not under test")
     }
 
     private class FakeStore : CurrentBusinessStore {

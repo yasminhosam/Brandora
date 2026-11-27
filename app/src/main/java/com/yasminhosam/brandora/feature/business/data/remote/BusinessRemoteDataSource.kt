@@ -18,4 +18,8 @@ class BusinessRemoteDataSource @Inject constructor(
 
     suspend fun createBusiness(input: NewBusiness): ApiResult<BusinessProfile> =
         errorHandler.safeApiCall { api.createBusiness(input.toRequestDto()) }.map { it.toDomain() }
+
+    suspend fun getBusinesses(limit: Int = 20, offset: Int = 0): ApiResult<List<BusinessProfile>> =
+        errorHandler.safeApiCall { api.getBusinesses(limit, offset) }
+            .map { page -> page.items.map { it.toDomain() } }
 }

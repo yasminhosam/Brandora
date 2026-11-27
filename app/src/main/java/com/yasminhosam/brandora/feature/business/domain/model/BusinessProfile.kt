@@ -4,8 +4,8 @@ package com.yasminhosam.brandora.feature.business.domain.model
 data class BusinessProfile(
     val id: String,
     val name: String,
-    val description: String?,
-    val category: String?,
-    val phone: String?,
-    val address: String?
+    val description: String? = null,
+    val category: String? = null,
+    val phone: String? = null,
+    val address: String? = null
 )

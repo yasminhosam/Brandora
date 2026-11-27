@@ -6,4 +6,5 @@ import com.yasminhosam.brandora.feature.business.domain.model.NewBusiness
 
 interface BusinessRepository {
     suspend fun createBusiness(input: NewBusiness): ApiResult<BusinessProfile>
+    suspend fun getBusinesses(limit: Int = 20, offset: Int = 0): ApiResult<List<BusinessProfile>>
 }
